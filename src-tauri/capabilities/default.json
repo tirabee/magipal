@@ -9,6 +9,11 @@
     "core:default",
     "opener:default",
     "dialog:default",
-    "fs:default"
+    "fs:default",
+    "fs:allow-write-text-file",
+    "fs:allow-read-text-file",
+    "fs:allow-read-file",
+    "fs:allow-exists",
+    "fs:scope-home-recursive"
   ]
 }

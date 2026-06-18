@@ -162,9 +162,19 @@ function GridTab({ palettes, currentPaletteId, onImport }: {
 }
 
   const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    const img = e.currentTarget
-    setImageSize({ w: img.naturalWidth, h: img.naturalHeight })
-  }, [])
+  const img = e.currentTarget
+  const w = img.naturalWidth
+  const h = img.naturalHeight
+  setImageSize({ w, h })
+
+  // Auto-detect grid dimensions based on aspect ratio
+  // Try to find a cell size that divides evenly, defaulting to 16px cells
+  const guessCell = Math.min(w, h)
+  const guessedCols = Math.round(w / guessCell)
+  const guessedRows = Math.round(h / guessCell)
+  setColumns(Math.max(1, guessedCols))
+  setRows(Math.max(1, guessedRows))
+}, [])
 
   const handleSample = useCallback(() => {
     const canvas = canvasRef.current
@@ -186,6 +196,7 @@ function GridTab({ palettes, currentPaletteId, onImport }: {
   useEffect(() => {
     if (imageSrc) handleSample()
   }, [imageSrc, columns, rows, handleSample])
+
 
   const handleRemoveColor = (i: number) => {
     setColors(prev => prev.filter((_, idx) => idx !== i))
@@ -209,22 +220,23 @@ function GridTab({ palettes, currentPaletteId, onImport }: {
 
       {imageSrc && (
         <>
-          <div className="grid-preview">
-            <img
-              src={imageSrc}
-              alt="palette source"
-              onLoad={handleImageLoad}
-              style={{
-                maxWidth: '100%',
-                maxHeight: 180,
-                imageRendering: 'pixelated',
-                border: '1px solid var(--border)',
-              }}
-            />
-            <div className="grid-size-label">
-              {imageSize.w} × {imageSize.h}px
-            </div>
-          </div>
+       <div className="grid-preview">
+  <img
+    src={imageSrc}
+    alt="palette source"
+    onLoad={handleImageLoad}
+    style={{
+      display: 'block',
+      maxWidth: '100%',
+      maxHeight: 180,
+      imageRendering: 'pixelated',
+      border: '1px solid var(--border)',
+    }}
+  />
+  <div className="grid-size-label">
+    {imageSize.w} × {imageSize.h}px
+  </div>
+</div>
 
           <div className="grid-controls">
             <label className="grid-control">

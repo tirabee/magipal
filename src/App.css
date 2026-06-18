@@ -20,6 +20,20 @@
   background: var(--bg-base);
 }
 
+[data-theme="light"] {
+  --bg-base:       #f0f0f5;
+  --bg-panel:      #e2e2ec;
+  --bg-surface:    #c8c8de;
+  --bg-raised:     #d4d4e8;
+  --border:        #b0b0cc;
+  --border-light:  #9090b0;
+  --accent:        #c0183a;
+  --accent-dim:    #8f1028;
+  --text-primary:  #1a1a2e;
+  --text-secondary:#3a3a5c;
+  --text-dim:      #7070a0;
+}
+
 body { overflow: hidden; user-select: none; }
 
 /* ── Layout ── */
@@ -589,3 +603,368 @@ body { overflow: hidden; user-select: none; }
 }
 
 .text-input:focus { outline: 1px solid var(--accent); }
+
+/* ── Color Picker Modal ── */
+.color-picker-modal {
+  width: 300px;
+}
+
+.picker-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.picker-canvas-wrap {
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.picker-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.picker-preview-row {
+  align-items: stretch;
+}
+
+.picker-preview {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.picker-hex-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  padding: 0 8px;
+}
+
+.picker-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-weight: 700;
+}
+
+.picker-hex-input {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  width: 100%;
+  padding: 6px 0;
+  text-transform: lowercase;
+}
+
+.picker-hex-input:focus { outline: none; }
+
+.picker-rgb-row {
+  gap: 6px;
+}
+
+.picker-rgb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.picker-rgb-input {
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  padding: 4px 6px;
+  width: 100%;
+  text-align: center;
+}
+
+.picker-rgb-input:focus { outline: 1px solid var(--accent); }
+
+.picker-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.picker-recent-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.picker-recent-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.picker-recent-swatch {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.picker-recent-swatch:hover {
+  outline: 2px solid var(--accent);
+}
+
+.picker-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Duplicate badge ── */
+.swatch-color {
+  position: relative;
+}
+
+.swatch-duplicate-badge {
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  font-size: 9px;
+  line-height: 1;
+  opacity: 0.6;
+  pointer-events: none;
+  filter: drop-shadow(0 0 2px rgba(0,0,0,0.8));
+}
+
+/* ── Eyedropper Modal ── */
+.eyedropper-modal {
+  width: 320px;
+}
+
+.eyedropper-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.eyedropper-preview-swatch {
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.eyedropper-preview-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eyedropper-hex {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.05em;
+}
+
+/* ── Eyedropper toolbar button ── */
+.eyedropper-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-light);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 15px;
+  padding: 0;
+  transition: background 0.1s;
+}
+
+.eyedropper-btn:hover {
+  background: var(--border);
+}
+
+.eyedropper-btn:active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+
+/* ── Settings Popover ── */
+.popover-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+.popover {
+  position: absolute;
+  top: 34px;
+  right: 8px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  z-index: 51;
+  min-width: 180px;
+  padding: 8px 0;
+}
+
+.popover-section {
+  padding: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.popover-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.popover-options {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.popover-option {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-align: left;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.popover-option:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+.popover-option.active {
+  color: var(--accent);
+  background: var(--bg-raised);
+}
+
+.popover-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+/* ── Settings button ── */
+.settings-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+}
+
+.settings-btn:hover { color: var(--text-primary); }
+
+/* ── Circle swatches ── */
+.swatch-circle {
+  border-radius: 50% !important;
+}
+
+/* ── Bar swatches ── */
+.palette-swatches-bar {
+  flex-direction: column;
+}
+
+.swatch-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.swatch-bar {
+  display: flex;
+  height: 60px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.swatch-bar-segment {
+  position: relative;
+  cursor: pointer;
+  transition: flex 0.1s;
+}
+
+.swatch-bar-segment:hover {
+  flex: 2 !important;
+}
+
+.swatch-bar-labels {
+  display: flex;
+  gap: 0;
+  overflow: hidden;
+}
+
+.swatch-bar-label {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+}
+
+.swatch-bar-label {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+}
+
+.label-horizontal {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-top: 3px;
+  text-align: center;
+  width: 100%;
+}
+
+.label-vertical {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  overflow: hidden;
+  max-height: 52px;
+  text-overflow: ellipsis;
+  padding-top: 2px;
+}

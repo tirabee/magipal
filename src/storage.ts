@@ -61,6 +61,18 @@ export async function getRecentColors(): Promise<string[]> {
 export async function addRecentColor(hex: string): Promise<void> {
   return invoke('add_recent_color', { hex })
 }
+
+export async function exportPaletteJson(paletteId: string): Promise<string> {
+  return invoke('export_palette_json', { paletteId })
+}
+
+export async function getPreference(key: string): Promise<string | null> {
+  return invoke('get_preference', { key })
+}
+
+export async function setPreference(key: string, value: string): Promise<void> {
+  return invoke('set_preference', { key, value })
+}
 // ── Helpers ──────────────────────────────────────────────────────
 
 export function newPalette(name: string, folder?: string): Palette {

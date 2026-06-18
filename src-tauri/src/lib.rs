@@ -176,6 +176,74 @@ fn add_recent_color(app: tauri::AppHandle, hex: String) -> Result<(), String> {
     fs::write(path, json).map_err(|e| e.to_string())?;
     Ok(())
 }
+
+#[tauri::command]
+fn export_palette_json(app: tauri::AppHandle, palette_id: String) -> Result<String, String> {
+    let data = load_data(&app);
+    let palette = data.palettes
+        .iter()
+        .find(|p| p.id == palette_id)
+        .ok_or("Palette not found")?;
+    
+    let mut rgb_arrays: Vec<[u8; 3]> = palette.colors
+        .iter()
+        .filter_map(|c| {
+            let hex = c.hex.trim_start_matches('#');
+            if hex.len() == 6 {
+                let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
+                let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
+                let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
+                Some([r, g, b])
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    // Pad to 50 slots with [0, 0, 0]
+    while rgb_arrays.len() < 50 {
+        rgb_arrays.push([0, 0, 0]);
+    }
+    // Truncate if somehow over 50
+    rgb_arrays.truncate(50);
+
+    serde_json::to_string_pretty(&rgb_arrays).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn get_preference(app: tauri::AppHandle, key: String) -> Option<String> {
+    let path = app
+        .path()
+        .app_data_dir()
+        .expect("could not resolve app data dir")
+        .join("preferences.json");
+    if path.exists() {
+        let contents = fs::read_to_string(&path).unwrap_or_default();
+        let prefs: serde_json::Value = serde_json::from_str(&contents).unwrap_or_default();
+        prefs[key].as_str().map(|s| s.to_string())
+    } else {
+        None
+    }
+}
+
+#[tauri::command]
+fn set_preference(app: tauri::AppHandle, key: String, value: String) -> Result<(), String> {
+    let path = app
+        .path()
+        .app_data_dir()
+        .expect("could not resolve app data dir")
+        .join("preferences.json");
+    let mut prefs: serde_json::Value = if path.exists() {
+        let contents = fs::read_to_string(&path).unwrap_or_default();
+        serde_json::from_str(&contents).unwrap_or(serde_json::json!({}))
+    } else {
+        serde_json::json!({})
+    };
+    prefs[key] = serde_json::Value::String(value);
+    let json = serde_json::to_string_pretty(&prefs).map_err(|e| e.to_string())?;
+    fs::write(path, json).map_err(|e| e.to_string())?;
+    Ok(())
+}
 // ── App entry ────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -195,6 +263,9 @@ pub fn run() {
             move_palette_to_folder,
             get_recent_colors,
             add_recent_color,
+            export_palette_json,
+            get_preference,
+            set_preference,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")
