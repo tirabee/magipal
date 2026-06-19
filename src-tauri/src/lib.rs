@@ -244,6 +244,31 @@ fn set_preference(app: tauri::AppHandle, key: String, value: String) -> Result<(
     fs::write(path, json).map_err(|e| e.to_string())?;
     Ok(())
 }
+
+#[tauri::command]
+fn rename_palette(app: tauri::AppHandle, id: String, name: String) -> Result<(), String> {
+    let mut data = load_data(&app);
+    if let Some(p) = data.palettes.iter_mut().find(|p| p.id == id) {
+        p.name = name;
+    }
+    save_data(&app, &data)
+}
+
+#[tauri::command]
+fn rename_folder(app: tauri::AppHandle, old_name: String, new_name: String) -> Result<(), String> {
+    let mut data = load_data(&app);
+    // Rename the folder
+    if let Some(f) = data.folders.iter_mut().find(|f| **f == old_name) {
+        *f = new_name.clone();
+    }
+    // Update all palettes that reference the old folder name
+    for palette in data.palettes.iter_mut() {
+        if palette.folder.as_deref() == Some(&old_name) {
+            palette.folder = Some(new_name.clone());
+        }
+    }
+    save_data(&app, &data)
+}
 // ── App entry ────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -266,6 +291,8 @@ pub fn run() {
             export_palette_json,
             get_preference,
             set_preference,
+            rename_palette,
+            rename_folder,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")

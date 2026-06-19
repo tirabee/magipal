@@ -12,7 +12,8 @@ import {
 } from '@dnd-kit/core'
 import { useState } from 'react'
 import type { Palette } from './storage'
-import { reorderPalettes, reorderFolders, movePaletteToFolder } from './storage'
+import { reorderPalettes, reorderFolders, movePaletteToFolder, renamePalette, renameFolder } from './storage'
+
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -30,14 +31,16 @@ interface SidebarProps {
 
 // ── Draggable Palette Item ────────────────────────────────────────
 
-function DraggablePaletteItem({ palette, selected, onSelect, onDelete, indented, isOver }: {
+function DraggablePaletteItem({ palette, selected, onSelect, onDelete, indented, isOver, onRename }: {
   palette: Palette
   selected: boolean
   onSelect: () => void
   onDelete: () => void
   indented?: boolean
   isOver?: boolean
+  onRename: (newName: string) => void
 }) {
+  const [editingName, setEditingName] = useState<string | null>(null)
   const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
     id: palette.id,
     data: { type: 'palette', palette },
@@ -75,7 +78,35 @@ function DraggablePaletteItem({ palette, selected, onSelect, onDelete, indented,
           <div className="palette-item-swatch" style={{ background: 'transparent' }} />
         )}
       </div>
-      <span className="palette-item-name">{palette.name}</span>
+      {editingName !== null ? (
+  <input
+    className="folder-rename-input"
+    value={editingName}
+    autoFocus
+    onChange={e => setEditingName(e.target.value)}
+    onBlur={async () => {
+      if (editingName.trim() && editingName.trim() !== palette.name) {
+        await onRename(editingName.trim())
+      }
+      setEditingName(null)
+    }}
+    onKeyDown={e => {
+      if (e.key === 'Enter') e.currentTarget.blur()
+      if (e.key === 'Escape') setEditingName(null)
+    }}
+    onClick={e => e.stopPropagation()}
+  />
+) : (
+  <span
+    className="palette-item-name"
+    onDoubleClick={e => {
+      e.stopPropagation()
+      setEditingName(palette.name)
+    }}
+  >
+    {palette.name}
+  </span>
+)}
       <button
         className="palette-delete"
         onClick={e => { e.stopPropagation(); onDelete() }}
@@ -87,16 +118,18 @@ function DraggablePaletteItem({ palette, selected, onSelect, onDelete, indented,
 
 // ── Droppable Folder ──────────────────────────────────────────────
 
-function DroppableFolder({ name, palettes, selectedId, onSelect, onDelete, onDeletePalette }: {
+function DroppableFolder({ name, palettes, selectedId, onSelect, onDelete, onDeletePalette, onRename }: {
   name: string
   palettes: Palette[]
   selectedId: string | null
   onSelect: (id: string) => void
   onDelete: () => void
   onDeletePalette: (id: string) => void
+  onRename: (newName: string) => void
+  onRenamePalette: (id: string, newName: string) => void
 }) {
   const [open, setOpen] = useState(true)
-
+  const [editingName, setEditingName] = useState<string | null>(null)
   const { setNodeRef, isOver } = useDroppable({
     id: `folder:${name}`,
     data: { type: 'folder', name },
@@ -122,7 +155,32 @@ function DroppableFolder({ name, palettes, selectedId, onSelect, onDelete, onDel
         >
           {open ? '▾' : '▸'}
         </span>
-        <span className="folder-name">{name}</span>
+        {editingName !== null ? (
+  <input
+    className="folder-rename-input"
+    value={editingName}
+    autoFocus
+    onChange={e => setEditingName(e.target.value)}
+    onBlur={async () => {
+      if (editingName.trim() && editingName.trim() !== name) {
+        await onRename(editingName.trim())
+      }
+      setEditingName(null)
+    }}
+    onKeyDown={e => {
+      if (e.key === 'Enter') e.currentTarget.blur()
+      if (e.key === 'Escape') setEditingName(null)
+    }}
+    onClick={e => e.stopPropagation()}
+  />
+) : (
+  <span
+    className="folder-name"
+    onDoubleClick={e => { e.stopPropagation(); setEditingName(name) }}
+  >
+    {name}
+  </span>
+)}
         <button
           className="folder-delete"
           onClick={e => { e.stopPropagation(); onDelete() }}
@@ -136,7 +194,7 @@ function DroppableFolder({ name, palettes, selectedId, onSelect, onDelete, onDel
           selected={p.id === selectedId}
           onSelect={() => onSelect(p.id)}
           onDelete={() => onDeletePalette(p.id)}
-          indented
+          onRename={newName => onRename(newName)}          indented
         />
       ))}
     </div>
@@ -206,6 +264,15 @@ export function Sidebar({
     const bo = (b as any).order ?? 0
     return ao - bo
   })
+  const handleRenamePalette = async (id: string, newName: string) => {
+  await renamePalette(id, newName)
+  onUpdated()
+}
+
+const handleRenameFolder = async (oldName: string, newName: string) => {
+  await renameFolder(oldName, newName)
+  onUpdated()
+}
 
   const folderPalettes = (folder: string) =>
     sortedPalettes.filter(p => p.folder === folder)
@@ -319,6 +386,8 @@ export function Sidebar({
               onSelect={onSelect}
               onDelete={() => onDeleteFolder(folder)}
               onDeletePalette={onDelete}
+              onRename={newName => handleRenameFolder(folder, newName)}
+              onRenamePalette={handleRenamePalette}
             />
           ))}
 
@@ -330,6 +399,7 @@ export function Sidebar({
                 selected={p.id === selectedId}
                 onSelect={() => onSelect(p.id)}
                 onDelete={() => onDelete(p.id)}
+                onRename={newName => handleRenamePalette(p.id, newName)}
               />
             ))}
           </SidebarFloor>

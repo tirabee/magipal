@@ -73,6 +73,14 @@ export async function getPreference(key: string): Promise<string | null> {
 export async function setPreference(key: string, value: string): Promise<void> {
   return invoke('set_preference', { key, value })
 }
+
+export async function renamePalette(id: string, name: string): Promise<void> {
+  return invoke('rename_palette', { id, name })
+}
+
+export async function renameFolder(oldName: string, newName: string): Promise<void> {
+  return invoke('rename_folder', { oldName, newName })
+}
 // ── Helpers ──────────────────────────────────────────────────────
 
 export function newPalette(name: string, folder?: string): Palette {

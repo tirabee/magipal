@@ -320,6 +320,7 @@ function PaletteView({ palette, onUpdated, onAddColor, onExportJson, swatchStyle
   const [copiedHex, setCopiedHex] = useState<string | null>(null)
   const barRef = useRef<HTMLDivElement>(null)
   const [segmentWidth, setSegmentWidth] = useState(999)
+  const [editingTitle, setEditingTitle] = useState<string | null>(null)
 
 useEffect(() => {
   if (!barRef.current || palette.colors.length === 0) return
@@ -351,7 +352,34 @@ useEffect(() => {
   return (
     <div className="palette-view">
       <div className="palette-view-header">
-  <div className="palette-view-name">{palette.name}</div>
+  {editingTitle ? (
+  <input
+    className="palette-title-input"
+    value={editingTitle}
+    autoFocus
+    onChange={e => setEditingTitle(e.target.value)}
+    onBlur={async () => {
+      if (editingTitle.trim() && editingTitle.trim() !== palette.name) {
+        const updated = { ...palette, name: editingTitle.trim() }
+        await savePalette(updated)
+        onUpdated()
+      }
+      setEditingTitle(null)
+    }}
+    onKeyDown={e => {
+      if (e.key === 'Enter') e.currentTarget.blur()
+      if (e.key === 'Escape') setEditingTitle(null)
+    }}
+  />
+) : (
+  <div
+    className="palette-view-name"
+    onDoubleClick={() => setEditingTitle(palette.name)}
+    title="Double-click to rename"
+  >
+    {palette.name}
+  </div>
+)}
   <div style={{ display: 'flex', gap: 6 }}>
     <button className="btn" onClick={onExportJson} title="Export as JSON">
       ⬇ JSON

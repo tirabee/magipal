@@ -968,3 +968,27 @@ body { overflow: hidden; user-select: none; }
   text-overflow: ellipsis;
   padding-top: 2px;
 }
+
+/* ── Inline rename input ── */
+.folder-rename-input {
+  background: var(--bg-base);
+  border: 1px solid var(--accent);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 1px 4px;
+  width: 100%;
+  outline: none;
+}
+
+.palette-title-input {
+  background: var(--bg-base);
+  border: 1px solid var(--accent);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 2px 6px;
+  outline: none;
+  width: 300px;
+}
