@@ -81,6 +81,10 @@ export async function renamePalette(id: string, name: string): Promise<void> {
 export async function renameFolder(oldName: string, newName: string): Promise<void> {
   return invoke('rename_folder', { oldName, newName })
 }
+
+export async function exportPaletteAse(paletteId: string): Promise<number[]> {
+  return invoke('export_palette_ase', { paletteId })
+}
 // ── Helpers ──────────────────────────────────────────────────────
 
 export function newPalette(name: string, folder?: string): Palette {

@@ -180,9 +180,10 @@ interface ColorPickerModalProps {
   initialColor?: string
   onConfirm: (hex: string) => void
   onClose: () => void
+  mode?: 'add' | 'edit'
 }
 
-export function ColorPickerModal({ initialColor = '#ff0000', onConfirm, onClose }: ColorPickerModalProps) {
+export function ColorPickerModal({ initialColor = '#ff0000', onConfirm, onClose, mode = 'add' }: ColorPickerModalProps) {
   const [rgb] = hexToRgb(initialColor)
   const initHsv = rgbToHsv(...hexToRgb(initialColor))
 
@@ -237,8 +238,7 @@ export function ColorPickerModal({ initialColor = '#ff0000', onConfirm, onClose 
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal color-picker-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-titlebar">
-          <span className="modal-title">Color Picker</span>
-          <button className="modal-close" onClick={onClose}>×</button>
+<span className="modal-title">{mode === 'edit' ? 'Edit Color' : 'Color Picker'}</span>          <button className="modal-close" onClick={onClose}>×</button>
         </div>
 
         <div className="picker-body">
@@ -312,9 +312,9 @@ export function ColorPickerModal({ initialColor = '#ff0000', onConfirm, onClose 
           {/* Actions */}
           <div className="picker-actions">
             <button className="btn" onClick={onClose}>Cancel</button>
-            <button className="btn btn-accent" onClick={handleConfirm}>
-              Add Color
-            </button>
+           <button className="btn btn-accent" onClick={handleConfirm}>
+  {mode === 'edit' ? 'Update Color' : 'Add Color'}
+</button>
           </div>
         </div>
       </div>

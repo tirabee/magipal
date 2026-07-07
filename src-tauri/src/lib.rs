@@ -269,6 +269,92 @@ fn rename_folder(app: tauri::AppHandle, old_name: String, new_name: String) -> R
     }
     save_data(&app, &data)
 }
+
+#[tauri::command]
+fn export_palette_ase(app: tauri::AppHandle, palette_id: String) -> Result<Vec<u8>, String> {
+    let data = load_data(&app);
+    let palette = data.palettes
+        .iter()
+        .find(|p| p.id == palette_id)
+        .ok_or("Palette not found")?;
+
+    let mut bytes: Vec<u8> = Vec::new();
+
+    // ASE file signature
+    bytes.extend_from_slice(b"ASEF");
+    // Version 1.0
+    bytes.extend_from_slice(&[0x00, 0x01, 0x00, 0x00]);
+
+    let mut blocks: Vec<u8> = Vec::new();
+    let mut block_count: u32 = 0;
+
+    // Group start block
+    {
+        blocks.extend_from_slice(&[0xc0, 0x01]); // block type: group start
+        let group_name = &palette.name;
+        let group_utf16: Vec<u16> = group_name.encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
+        let mut group_body: Vec<u8> = Vec::new();
+        group_body.extend_from_slice(&(group_utf16.len() as u16).to_be_bytes());
+        for unit in group_utf16 {
+            group_body.extend_from_slice(&unit.to_be_bytes());
+        }
+        blocks.extend_from_slice(&(group_body.len() as u32).to_be_bytes());
+        blocks.extend_from_slice(&group_body);
+        block_count += 1;
+    }
+
+    // Color blocks
+    for color in &palette.colors {
+        let hex = color.hex.trim_start_matches('#');
+        if hex.len() != 6 { continue; }
+        let r = u8::from_str_radix(&hex[0..2], 16).map_err(|e| e.to_string())? as f32 / 255.0;
+        let g = u8::from_str_radix(&hex[2..4], 16).map_err(|e| e.to_string())? as f32 / 255.0;
+        let b = u8::from_str_radix(&hex[4..6], 16).map_err(|e| e.to_string())? as f32 / 255.0;
+
+        blocks.extend_from_slice(&[0x00, 0x01]); // block type: color
+
+        let mut body: Vec<u8> = Vec::new();
+
+        // Color name: use custom name if set, otherwise hex without #
+        let name = color.name.as_deref().unwrap_or(hex);
+        let name_utf16: Vec<u16> = name.encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
+        body.extend_from_slice(&(name_utf16.len() as u16).to_be_bytes());
+        for unit in name_utf16 {
+            body.extend_from_slice(&unit.to_be_bytes());
+        }
+
+        // Color model: RGB
+        body.extend_from_slice(b"RGB ");
+
+        // RGB float values big-endian
+        body.extend_from_slice(&r.to_be_bytes());
+        body.extend_from_slice(&g.to_be_bytes());
+        body.extend_from_slice(&b.to_be_bytes());
+
+        // Color type: 0 = global
+        body.extend_from_slice(&[0x00, 0x00]);
+
+        blocks.extend_from_slice(&(body.len() as u32).to_be_bytes());
+        blocks.extend_from_slice(&body);
+        block_count += 1;
+    }
+
+    // Group end block
+    {
+        blocks.extend_from_slice(&[0xc0, 0x02]); // block type: group end
+        blocks.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]); // empty body
+        block_count += 1;
+    }
+
+    bytes.extend_from_slice(&block_count.to_be_bytes());
+    bytes.extend_from_slice(&blocks);
+
+    Ok(bytes)
+}
 // ── App entry ────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -293,6 +379,7 @@ pub fn run() {
             set_preference,
             rename_palette,
             rename_folder,
+            export_palette_ase,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")
