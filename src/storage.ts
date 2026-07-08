@@ -13,6 +13,8 @@ export interface Palette {
   colors: Color[]
   folder?: string
   created_at: number
+  order?: number
+  locked?: boolean
 }
 
 export interface AppData {
@@ -84,6 +86,10 @@ export async function renameFolder(oldName: string, newName: string): Promise<vo
 
 export async function exportPaletteAse(paletteId: string): Promise<number[]> {
   return invoke('export_palette_ase', { paletteId })
+}
+
+export async function togglePaletteLock(id: string): Promise<void> {
+  return invoke('toggle_palette_lock', { id })
 }
 // ── Helpers ──────────────────────────────────────────────────────
 

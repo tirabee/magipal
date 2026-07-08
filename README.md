@@ -1,7 +1,79 @@
-# Tauri + React + Typescript
+# 🎨 Magipal
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+A desktop color palette manager built for pixel artists, indie game developers, and anyone who loves to play with colors and swatches!
 
-## Recommended IDE Setup
+---
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+## Features
+
+- **Palette management** — Create, rename, and delete palettes; add and remove individual colors
+- **System-wide eyedropper** — Pick any color from anywhere on your screen
+- **Manual color picker** — Fine-tune colors without leaving the app
+- **PNG import** — Import palettes directly from swatch grid images
+- **Multi-format exports** — Export palettes in various formats for use in other tools like GIMP, Adobe Photoshop, Aseprite, and more.
+- **Click-to-copy hex** — One click copies any hex value to your clipboard
+- **Options to fit your mood** — Light & Dark mode available, along with multiple swatch types: square, circle, and bar.
+
+---
+
+## Planned Features
+
+- Dither test view per palette
+- Analogous palette generation
+- Palette folders and mood/vibe tags
+- WCAG accessibility / contrast checker
+- Harmony suggester (complementary, triadic, analogous)
+
+See [ROADMAP.md](./ROADMAP.md) for the full picture.
+
+---
+
+## Known Issues
+
+- Large palettes in bar mode have an issue where the hex codes will truncate (dependent on window size)
+- Sorted colors receive duplicate icon until palette is reverted to default sort
+
+## Tech Stack
+
+- [Tauri](https://tauri.app/) — cross-platform desktop shell (Rust)
+- [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) — UI
+- [Vite](https://vitejs.dev/) — build tooling
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (v18+)
+- [Rust](https://www.rust-lang.org/tools/install)
+- Tauri CLI: `npm install -g @tauri-apps/cli`
+
+### Install & Run
+
+```bash
+git clone https://github.com/tirabee/magipal.git
+cd magipal
+npm install
+npm run tauri dev
+```
+
+### Build
+
+```bash
+npm run tauri build
+```
+
+---
+
+## About
+
+Magipal is an independent project by [tirabee](https://github.com/tirabee)
+
+Made with love for anyone who enjoys colors and creativity. ♥
+
+---
+
+## License
+
+MIT

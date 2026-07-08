@@ -12,7 +12,7 @@ import {
 } from '@dnd-kit/core'
 import { useState } from 'react'
 import type { Palette } from './storage'
-import { reorderPalettes, reorderFolders, movePaletteToFolder, renamePalette, renameFolder } from './storage'
+import { reorderPalettes, reorderFolders, movePaletteToFolder, renamePalette, renameFolder, togglePaletteLock } from './storage'
 
 
 // ── Types ────────────────────────────────────────────────────────
@@ -31,7 +31,7 @@ interface SidebarProps {
 
 // ── Draggable Palette Item ────────────────────────────────────────
 
-function DraggablePaletteItem({ palette, selected, onSelect, onDelete, indented, isOver, onRename }: {
+function DraggablePaletteItem({ palette, selected, onSelect, onDelete, indented, isOver, onRename, onToggleLock }: {
   palette: Palette
   selected: boolean
   onSelect: () => void
@@ -39,6 +39,7 @@ function DraggablePaletteItem({ palette, selected, onSelect, onDelete, indented,
   indented?: boolean
   isOver?: boolean
   onRename: (newName: string) => void
+  onToggleLock: () => void
 }) {
   const [editingName, setEditingName] = useState<string | null>(null)
   const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
@@ -64,9 +65,11 @@ function DraggablePaletteItem({ palette, selected, onSelect, onDelete, indented,
         selected ? 'active' : '',
         indented ? 'indented' : '',
         isDropOver ? 'drop-target' : '',
+        palette.locked ? 'palette-locked' : '',
       ].join(' ')}
       style={{ opacity: isDragging ? 0.3 : 1 }}
       onClick={onSelect}
+      onContextMenu={e => { e.preventDefault(); onToggleLock() }}
       {...attributes}
       {...listeners}
     >
@@ -78,7 +81,7 @@ function DraggablePaletteItem({ palette, selected, onSelect, onDelete, indented,
           <div className="palette-item-swatch" style={{ background: 'transparent' }} />
         )}
       </div>
-      {editingName !== null ? (
+{editingName !== null ? (
   <input
     className="folder-rename-input"
     value={editingName}
@@ -100,6 +103,7 @@ function DraggablePaletteItem({ palette, selected, onSelect, onDelete, indented,
   <span
     className="palette-item-name"
     onDoubleClick={e => {
+      if (palette.locked) return
       e.stopPropagation()
       setEditingName(palette.name)
     }}
@@ -107,18 +111,23 @@ function DraggablePaletteItem({ palette, selected, onSelect, onDelete, indented,
     {palette.name}
   </span>
 )}
-      <button
-        className="palette-delete"
-        onClick={e => { e.stopPropagation(); onDelete() }}
-        title="Delete palette"
-      >×</button>
+{palette.locked && (
+  <span className="palette-lock-icon" title="Locked">🔒</span>
+)}
+      {!palette.locked && (
+  <button
+    className="palette-delete"
+    onClick={e => { e.stopPropagation(); onDelete() }}
+    title="Delete palette"
+  >×</button>
+)}
     </div>
   )
 }
 
 // ── Droppable Folder ──────────────────────────────────────────────
 
-function DroppableFolder({ name, palettes, selectedId, onSelect, onDelete, onDeletePalette, onRename }: {
+function DroppableFolder({ name, palettes, selectedId, onSelect, onDelete, onDeletePalette, onRename, onToggleLock }: {
   name: string
   palettes: Palette[]
   selectedId: string | null
@@ -127,6 +136,7 @@ function DroppableFolder({ name, palettes, selectedId, onSelect, onDelete, onDel
   onDeletePalette: (id: string) => void
   onRename: (newName: string) => void
   onRenamePalette: (id: string, newName: string) => void
+  onToggleLock: (id: string) => void
 }) {
   const [open, setOpen] = useState(true)
   const [editingName, setEditingName] = useState<string | null>(null)
@@ -194,7 +204,9 @@ function DroppableFolder({ name, palettes, selectedId, onSelect, onDelete, onDel
           selected={p.id === selectedId}
           onSelect={() => onSelect(p.id)}
           onDelete={() => onDeletePalette(p.id)}
-          onRename={newName => onRename(newName)}          indented
+          onRename={newName => onRename(newName)} 
+          onToggleLock={() => onToggleLock(p.id)}
+          indented
         />
       ))}
     </div>
@@ -266,6 +278,11 @@ export function Sidebar({
   })
   const handleRenamePalette = async (id: string, newName: string) => {
   await renamePalette(id, newName)
+  onUpdated()
+}
+
+const handleToggleLock = async (id: string) => {
+  await togglePaletteLock(id)
   onUpdated()
 }
 
@@ -388,6 +405,7 @@ const handleRenameFolder = async (oldName: string, newName: string) => {
               onDeletePalette={onDelete}
               onRename={newName => handleRenameFolder(folder, newName)}
               onRenamePalette={handleRenamePalette}
+              onToggleLock={handleToggleLock}
             />
           ))}
 
@@ -400,6 +418,7 @@ const handleRenameFolder = async (oldName: string, newName: string) => {
                 onSelect={() => onSelect(p.id)}
                 onDelete={() => onDelete(p.id)}
                 onRename={newName => handleRenamePalette(p.id, newName)}
+                onToggleLock={() => handleToggleLock(p.id)}
               />
             ))}
           </SidebarFloor>

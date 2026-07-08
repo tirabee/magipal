@@ -18,6 +18,7 @@ struct Palette {
     folder: Option<String>,
     created_at: u64,
     order: Option<i64>,
+    locked: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -271,6 +272,15 @@ fn rename_folder(app: tauri::AppHandle, old_name: String, new_name: String) -> R
 }
 
 #[tauri::command]
+fn toggle_palette_lock(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    let mut data = load_data(&app);
+    if let Some(p) = data.palettes.iter_mut().find(|p| p.id == id) {
+        p.locked = Some(!p.locked.unwrap_or(false));
+    }
+    save_data(&app, &data)
+}
+
+#[tauri::command]
 fn export_palette_ase(app: tauri::AppHandle, palette_id: String) -> Result<Vec<u8>, String> {
     let data = load_data(&app);
     let palette = data.palettes
@@ -380,6 +390,7 @@ pub fn run() {
             rename_palette,
             rename_folder,
             export_palette_ase,
+            toggle_palette_lock,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")
