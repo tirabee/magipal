@@ -33,6 +33,8 @@ See [ROADMAP.md](./ROADMAP.md) for the full picture.
 - Large palettes in bar mode have an issue where the hex codes will truncate (dependent on window size)
 - Sorted colors receive duplicate icon until palette is reverted to default sort
 
+---
+
 ## Tech Stack
 
 - [Tauri](https://tauri.app/) — cross-platform desktop shell (Rust)
