@@ -31,6 +31,8 @@ import { RampModal } from "./RampModal";
 import { RandomizerModal } from "./RandomizerModal";
 import { DitherTestPanel } from "./DitherTest";
 import { ColorVisionPanel } from "./ColorVisionPanel";
+import { useHotkeys } from "./useHotkeys";
+import { ShortcutsModal } from "./ShortcutsModal";
 import "./App.css";
 
 // Temporarily disabled: a Chromium/WebView2 regression freezes all mouse
@@ -38,6 +40,12 @@ import "./App.css";
 // Beta, expected in stable Chromium 151 (~July 28, 2026).
 // Tracking: https://github.com/brave/brave-browser/issues/56888
 const EYEDROPPER_DISABLED = true;
+
+/**
+ * One mode rather than a boolean per panel: separate booleans would allow the
+ * nonsense state where the dither and vision panels are both open at once.
+ */
+type ViewMode = "swatches" | "dither" | "vision";
 // ── App ──────────────────────────────────────────────────────────
 
 function App() {
@@ -62,6 +70,8 @@ function App() {
   const [showLospecImport, setShowLospecImport] = useState(false);
   const [rampBaseColor, setRampBaseColor] = useState<string | null>(null);
   const [showRandomizer, setShowRandomizer] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("swatches");
   const [loadError, setLoadError] = useState<string | null>(null);
   // Load from disk on startup. A rejection here means the data file exists but
   // is unreadable — surface it instead of rendering an empty app, which would
@@ -242,6 +252,95 @@ function App() {
    */
   const importTargetId = selectedPalette?.locked ? null : selectedId;
 
+  /**
+   * The palettes in the order the sidebar actually shows them: sorted by their
+   * stored order, foldered ones first, then the loose ones. Arrow-key
+   * navigation has to agree with what's on screen or it feels broken.
+   */
+  const orderedPalettes = (() => {
+    const sorted = [...data.palettes].sort(
+      (a, b) => (a.order ?? 0) - (b.order ?? 0),
+    );
+    return [
+      ...data.folders.flatMap((f) => sorted.filter((p) => p.folder === f)),
+      ...sorted.filter((p) => !p.folder),
+    ];
+  })();
+
+  const selectAdjacent = (delta: number) => {
+    if (orderedPalettes.length === 0) return;
+    const i = orderedPalettes.findIndex((p) => p.id === selectedId);
+    const next =
+      i === -1
+        ? 0
+        : (i + delta + orderedPalettes.length) % orderedPalettes.length;
+    setSelectedId(orderedPalettes[next].id);
+  };
+
+  const openModals = [
+    pending !== null,
+    showShortcuts,
+    showColorPicker || editingColorIndex !== null,
+    rampBaseColor !== null,
+    eyedropperColor !== null,
+    showRandomizer,
+    showLospecImport,
+    showBulkImport,
+    showImportPng,
+    showExportMenu,
+    showNewPalette,
+    showNewFolder,
+    showSettings,
+  ];
+  const anyModalOpen = openModals.some(Boolean);
+
+  /** Escape dismisses whatever is on top, in the order they stack. */
+  const closeTopModal = () => {
+    if (pending) return handleCancel();
+    if (showShortcuts) return setShowShortcuts(false);
+    if (showColorPicker || editingColorIndex !== null) {
+      setShowColorPicker(false);
+      setEditingColorIndex(null);
+      return;
+    }
+    if (rampBaseColor) return setRampBaseColor(null);
+    if (eyedropperColor) return setEyedropperColor(null);
+    if (showRandomizer) return setShowRandomizer(false);
+    if (showLospecImport) return setShowLospecImport(false);
+    if (showBulkImport) return setShowBulkImport(false);
+    if (showImportPng) return setShowImportPng(false);
+    if (showExportMenu) return setShowExportMenu(false);
+    if (showNewPalette) return setShowNewPalette(false);
+    if (showNewFolder) return setShowNewFolder(false);
+    if (showSettings) return setShowSettings(false);
+  };
+
+  useHotkeys({
+    escape: closeTopModal,
+    // While a dialog is up, the only shortcut that should still fire is the one
+    // that dismisses it -- otherwise Ctrl+N would stack a second modal behind
+    // the first.
+    ...(anyModalOpen
+      ? {}
+      : {
+          "mod+n": () => setShowNewPalette(true),
+          "mod+shift+n": () => setShowNewFolder(true),
+          "mod+i": () => setShowBulkImport(true),
+          "mod+r": () => setShowRandomizer(true),
+          "mod+e": () => selectedPalette && setShowExportMenu(true),
+          "mod+l": () => selectedPalette && handleToggleLock(),
+          "mod+d": () =>
+            setViewMode((m) => (m === "dither" ? "swatches" : "dither")),
+          "mod+b": () =>
+            setViewMode((m) => (m === "vision" ? "swatches" : "vision")),
+          arrowup: () => selectAdjacent(-1),
+          arrowdown: () => selectAdjacent(1),
+          // '?' is Shift+/ on most layouts, but unshifted on some.
+          "shift+?": () => setShowShortcuts(true),
+          "?": () => setShowShortcuts(true),
+        }),
+  });
+
   const handleEyedropper = async () => {
     if (EYEDROPPER_DISABLED) return;
     try {
@@ -384,6 +483,8 @@ function App() {
               onRemoveColor={handleRemoveColor}
               onToggleLock={handleToggleLock}
               onGenerateRamp={setRampBaseColor}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
             />
           ) : (
             <div className="empty-state">
@@ -409,6 +510,13 @@ function App() {
             ⦁ {selectedPalette.colors.length} in selected
           </span>
         )}
+        <button
+          className="statusbar-shortcuts"
+          onClick={() => setShowShortcuts(true)}
+          title="Keyboard shortcuts"
+        >
+          <kbd className="shortcut-key">?</kbd> shortcuts
+        </button>
       </div>
       {showImportPng && (
         <ImportPngModal
@@ -519,6 +627,10 @@ function App() {
           }}
           onClose={() => setShowLospecImport(false)}
         />
+      )}
+
+      {showShortcuts && (
+        <ShortcutsModal onClose={() => setShowShortcuts(false)} />
       )}
 
       {showRandomizer && (
@@ -668,6 +780,8 @@ function PaletteView({
   onRemoveColor,
   onToggleLock,
   onGenerateRamp,
+  viewMode,
+  onViewModeChange,
 }: {
   palette: Palette;
   onUpdated: () => void;
@@ -678,13 +792,10 @@ function PaletteView({
   onRemoveColor: (index: number) => void;
   onToggleLock: () => void;
   onGenerateRamp: (hex: string) => void;
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
 }) {
   const [copiedHex, setCopiedHex] = useState<string | null>(null);
-  // One mode rather than a boolean per panel: two booleans would allow the
-  // nonsense state where both panels are open at once.
-  const [viewMode, setViewMode] = useState<"swatches" | "dither" | "vision">(
-    "swatches",
-  );
   const barRef = useRef<HTMLDivElement>(null);
   const [segmentWidth, setSegmentWidth] = useState(999);
   const [editingTitle, setEditingTitle] = useState<string | null>(null);
@@ -789,18 +900,18 @@ function PaletteView({
           <button
             className={`btn ${viewMode === "dither" ? "btn-accent" : ""}`}
             onClick={() =>
-              setViewMode((m) => (m === "dither" ? "swatches" : "dither"))
+              onViewModeChange(viewMode === "dither" ? "swatches" : "dither")
             }
-            title="Toggle dither test view"
+            title="Toggle dither test view (Ctrl+D)"
           >
             🎲 Dither
           </button>
           <button
             className={`btn ${viewMode === "vision" ? "btn-accent" : ""}`}
             onClick={() =>
-              setViewMode((m) => (m === "vision" ? "swatches" : "vision"))
+              onViewModeChange(viewMode === "vision" ? "swatches" : "vision")
             }
-            title="Check this palette for color blindness"
+            title="Check this palette for color blindness (Ctrl+B)"
           >
             👁 Vision
           </button>

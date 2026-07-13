@@ -284,6 +284,57 @@ body {
 .empty-state-text {
   font-size: 12px;
 }
+/* ── Keyboard Shortcuts ── */
+.shortcut-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+}
+.shortcut-keys {
+  display: flex;
+  gap: 3px;
+  min-width: 130px;
+  flex-shrink: 0;
+}
+.shortcut-key {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-light);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.shortcut-description {
+  color: var(--text-secondary);
+}
+
+.statusbar-shortcuts {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 4px;
+}
+.statusbar-shortcuts:hover {
+  color: var(--text-primary);
+}
+
 /* ── Color Vision Panel ── */
 .vision-panel {
   display: flex;
