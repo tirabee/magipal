@@ -173,6 +173,22 @@ fn check_limit(palette: &Palette) -> Result<(), String> {
     Ok(())
 }
 
+/// Replaces the entire stored state. Used by undo/redo, which restores whole
+/// snapshots rather than replaying inverse operations.
+///
+/// Deliberately does NOT run check_lock: a snapshot may legitimately predate a
+/// lock being applied, and undoing back across the lock is the point. It does
+/// re-check the color limits -- every snapshot was valid when it was captured,
+/// so this should never fire, and if it ever does that is a bug worth hearing
+/// about rather than a broken file worth writing.
+#[tauri::command]
+fn replace_all(app: tauri::AppHandle, data: AppData) -> Result<(), String> {
+    for palette in &data.palettes {
+        check_limit(palette)?;
+    }
+    save_data(&app, &data)
+}
+
 #[tauri::command]
 fn save_palette(app: tauri::AppHandle, palette: Palette) -> Result<(), String> {
     let mut data = load_data(&app)?;
@@ -705,6 +721,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             load_palettes,
+            replace_all,
             save_palette,
             delete_palette,
             save_folder,

@@ -25,7 +25,12 @@ interface SidebarProps {
   onDeleteFolder: (name: string) => void
   onNewPalette: () => void
   onNewFolder: () => void
-  onUpdated: () => void
+  /**
+   * Every change to saved data goes through App's mutate(), which snapshots the
+   * state first so the change can be undone. Calling a storage function directly
+   * from here would work, but the change would be invisible to undo.
+   */
+  onMutate: (label: string, action: () => Promise<void>) => Promise<void>
 }
 
 // ── Draggable Palette Item ────────────────────────────────────────
@@ -261,7 +266,7 @@ export function Sidebar({
   onDeleteFolder,
   onNewPalette,
   onNewFolder,
-  onUpdated,
+  onMutate,
 }: SidebarProps) {
   const [activePalette, setActivePalette] = useState<Palette | null>(null)
 
@@ -274,20 +279,18 @@ export function Sidebar({
     const bo = (b as any).order ?? 0
     return ao - bo
   })
-  const handleRenamePalette = async (id: string, newName: string) => {
-  await renamePalette(id, newName)
-  onUpdated()
-}
+  const handleRenamePalette = (id: string, newName: string) =>
+    onMutate('rename palette', () => renamePalette(id, newName))
 
-const handleToggleLock = async (id: string) => {
-  await togglePaletteLock(id)
-  onUpdated()
-}
+  const handleToggleLock = (id: string) => {
+    const locked = palettes.find(p => p.id === id)?.locked
+    return onMutate(locked ? 'unlock palette' : 'lock palette', () =>
+      togglePaletteLock(id),
+    )
+  }
 
-const handleRenameFolder = async (oldName: string, newName: string) => {
-  await renameFolder(oldName, newName)
-  onUpdated()
-}
+  const handleRenameFolder = (oldName: string, newName: string) =>
+    onMutate('rename folder', () => renameFolder(oldName, newName))
 
   const folderPalettes = (folder: string) =>
     sortedPalettes.filter(p => p.folder === folder)
@@ -315,51 +318,47 @@ const handleRenameFolder = async (oldName: string, newName: string) => {
       const draggedPalette = palettes.find(p => p.id === activeId)
       if (!draggedPalette) return
 
+      /** The palette ids, with `activeId` moved to sit where `targetId` was. */
+      const reorderedAround = (targetId: string): string[] | null => {
+        const ids = sortedPalettes.map(p => p.id)
+        const oldIndex = ids.indexOf(activeId)
+        const newIndex = ids.indexOf(targetId)
+        if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return null
+        const reordered = [...ids]
+        reordered.splice(oldIndex, 1)
+        reordered.splice(newIndex, 0, activeId)
+        return reordered
+      }
+
       // Dropped onto a folder → move into folder
       if (overData?.type === 'folder') {
         const folderName = overData.name
         if (draggedPalette.folder !== folderName) {
-          await movePaletteToFolder(activeId, folderName)
-          onUpdated()
+          await onMutate('move palette', () => movePaletteToFolder(activeId, folderName))
         }
         return
       }
 
       // Dropped onto the floor or an unfoldered palette → unfolder
       if (overData?.type === 'floor' || (overData?.type === 'palette-drop' && !overData.palette?.folder)) {
-        if (draggedPalette.folder) {
-          await movePaletteToFolder(activeId, null)
-          onUpdated()
-        }
-        // Also reorder if dropped onto a specific palette
-        if (overData?.type === 'palette-drop') {
-          const targetId = overData.palette.id
-          const ids = sortedPalettes.map(p => p.id)
-          const oldIndex = ids.indexOf(activeId)
-          const newIndex = ids.indexOf(targetId)
-          if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-            const reordered = [...ids]
-            reordered.splice(oldIndex, 1)
-            reordered.splice(newIndex, 0, activeId)
-            await reorderPalettes(reordered)
-            onUpdated()
-          }
-        }
+        const leavingFolder = Boolean(draggedPalette.folder)
+        const reordered =
+          overData?.type === 'palette-drop' ? reorderedAround(overData.palette.id) : null
+        if (!leavingFolder && !reordered) return
+
+        // One drag is one undo step, even though it may take two storage calls.
+        await onMutate(leavingFolder ? 'move palette' : 'reorder palettes', async () => {
+          if (leavingFolder) await movePaletteToFolder(activeId, null)
+          if (reordered) await reorderPalettes(reordered)
+        })
         return
       }
 
       // Dropped onto a palette in the same folder → reorder
       if (overData?.type === 'palette-drop' && overData.palette?.folder === draggedPalette.folder) {
-        const targetId = overData.palette.id
-        const ids = sortedPalettes.map(p => p.id)
-        const oldIndex = ids.indexOf(activeId)
-        const newIndex = ids.indexOf(targetId)
-        if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-          const reordered = [...ids]
-          reordered.splice(oldIndex, 1)
-          reordered.splice(newIndex, 0, activeId)
-          await reorderPalettes(reordered)
-          onUpdated()
+        const reordered = reorderedAround(overData.palette.id)
+        if (reordered) {
+          await onMutate('reorder palettes', () => reorderPalettes(reordered))
         }
         return
       }
@@ -376,8 +375,7 @@ const handleRenameFolder = async (oldName: string, newName: string) => {
         const reordered = [...folders]
         reordered.splice(oldIndex, 1)
         reordered.splice(newIndex, 0, activeName)
-        await reorderFolders(reordered)
-        onUpdated()
+        await onMutate('reorder folders', () => reorderFolders(reordered))
       }
     }
   }

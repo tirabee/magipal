@@ -43,6 +43,11 @@ export async function savePalette(palette: Palette): Promise<void> {
   return invoke('save_palette', { palette })
 }
 
+/** Restores a whole snapshot. Undo/redo only. */
+export async function replaceAll(data: AppData): Promise<void> {
+  return invoke('replace_all', { data })
+}
+
 export async function deletePalette(id: string): Promise<void> {
   return invoke('delete_palette', { id })
 }

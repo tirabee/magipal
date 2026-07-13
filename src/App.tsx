@@ -10,7 +10,19 @@ import {
   togglePaletteLock,
   remainingCapacity,
   colorLimit,
+  replaceAll,
 } from "./storage";
+import {
+  emptyHistory,
+  record,
+  undo as undoStep,
+  redo as redoStep,
+  canUndo,
+  canRedo,
+  undoLabel,
+  redoLabel,
+} from "./history";
+import type { History, Snapshot } from "./history";
 import type { Palette, AppData } from "./storage";
 import type { Destination } from "./DestinationPicker";
 import { hexToHsl, relativeLuminance } from "./color";
@@ -73,6 +85,9 @@ function App() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("swatches");
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Session-only, like every other app's undo stack. Note this shadows the
+  // browser's global `history` object, which is what we want here.
+  const [history, setHistory] = useState<History>(emptyHistory);
   // Load from disk on startup. A rejection here means the data file exists but
   // is unreadable — surface it instead of rendering an empty app, which would
   // invite the user to start saving over recoverable data.
@@ -83,23 +98,50 @@ function App() {
       .finally(() => setLoading(false));
   }, []);
 
+  /**
+   * The single path every change to saved data takes.
+   *
+   * It snapshots the current state before running the action, then reloads. It
+   * is also the ONLY code that calls loadPalettes() + setData() after a change,
+   * which is the safety net: a future feature that mutates without going
+   * through here won't refresh the UI, so you'll notice immediately. Compare
+   * with an inverse-operation design, where forgetting to register an inverse
+   * silently corrupts data the first time someone presses Ctrl+Z.
+   */
+  const mutate = async (label: string, action: () => Promise<void>) => {
+    const before: Snapshot = { data, selectedId, label };
+    await action();
+    setData(await loadPalettes());
+    setHistory((h) => record(h, before));
+  };
+
+  /** Restores a whole snapshot -- including the selection it was made under. */
+  const applyStep = async (
+    step: { history: History; restore: Snapshot } | null,
+  ) => {
+    if (!step) return;
+    await replaceAll(step.restore.data);
+    setData(step.restore.data);
+    setSelectedId(step.restore.selectedId);
+    setHistory(step.history);
+  };
+
+  const handleUndo = () => applyStep(undoStep(history, { data, selectedId }));
+  const handleRedo = () => applyStep(redoStep(history, { data, selectedId }));
+
   const handleToggleLock = async () => {
     if (!selectedPalette) return;
-    await togglePaletteLock(selectedPalette.id);
-    const updated = await loadPalettes();
-    setData(updated);
+    const label = selectedPalette.locked ? "unlock palette" : "lock palette";
+    await mutate(label, () => togglePaletteLock(selectedPalette.id));
   };
+
   const handleEditColor = async (hex: string) => {
     if (!selectedPalette || editingColorIndex === null) return;
-    const updatedColors = [...selectedPalette.colors];
-    updatedColors[editingColorIndex] = {
-      ...updatedColors[editingColorIndex],
-      hex,
-    };
-    const updated = { ...selectedPalette, colors: updatedColors };
-    await savePalette(updated);
-    const refreshed = await loadPalettes();
-    setData(refreshed);
+    const colors = [...selectedPalette.colors];
+    colors[editingColorIndex] = { ...colors[editingColorIndex], hex };
+    await mutate("edit color", () =>
+      savePalette({ ...selectedPalette, colors }),
+    );
     setEditingColorIndex(null);
   };
 
@@ -112,20 +154,53 @@ function App() {
       danger: true,
     });
     if (!confirmed) return;
-    const updated = {
-      ...selectedPalette,
-      colors: selectedPalette.colors.filter((_, i) => i !== index),
-    };
-    await savePalette(updated);
-    const refreshed = await loadPalettes();
-    setData(refreshed);
+    await mutate("remove color", () =>
+      savePalette({
+        ...selectedPalette,
+        colors: selectedPalette.colors.filter((_, i) => i !== index),
+      }),
+    );
+  };
+
+  const handleAddColor = async (hex: string) => {
+    if (!selectedPalette || selectedPalette.locked) return;
+    if (remainingCapacity(selectedPalette) < 1) return;
+    await mutate("add color", () =>
+      savePalette({
+        ...selectedPalette,
+        colors: [...selectedPalette.colors, { hex }],
+      }),
+    );
+    setShowColorPicker(false);
+  };
+
+  const handleRenamePalette = (name: string) => {
+    if (!selectedPalette) return;
+    return mutate("rename palette", () =>
+      savePalette({ ...selectedPalette, name }),
+    );
+  };
+
+  const handleRenameColor = (index: number, name: string | undefined) => {
+    if (!selectedPalette) return;
+    const colors = selectedPalette.colors.map((c, i) =>
+      i === index ? { ...c, name } : c,
+    );
+    return mutate(name ? "name color" : "clear color name", () =>
+      savePalette({ ...selectedPalette, colors }),
+    );
+  };
+
+  const handleSaveNotes = (notes: string | undefined) => {
+    if (!selectedPalette) return;
+    return mutate("edit notes", () =>
+      savePalette({ ...selectedPalette, notes }),
+    );
   };
 
   const handleNewPalette = async (name: string, maxColors?: number) => {
     const palette = newPalette(name, undefined, maxColors);
-    await savePalette(palette);
-    const updated = await loadPalettes();
-    setData(updated);
+    await mutate("create palette", () => savePalette(palette));
     setSelectedId(palette.id);
     setShowNewPalette(false);
   };
@@ -133,21 +208,17 @@ function App() {
   const handleDeletePalette = async (id: string) => {
     const name = data.palettes.find((p) => p.id === id)?.name ?? "this palette";
     const confirmed = await confirm({
-      message: `Delete "${name}"? This cannot be undone.`,
+      message: `Delete "${name}"?`,
       confirmLabel: "Delete",
       danger: true,
     });
     if (!confirmed) return;
-    await deletePalette(id);
-    const updated = await loadPalettes();
-    setData(updated);
+    await mutate("delete palette", () => deletePalette(id));
     if (selectedId === id) setSelectedId(null);
   };
 
   const handleNewFolder = async (name: string) => {
-    await saveFolder(name);
-    const updated = await loadPalettes();
-    setData(updated);
+    await mutate("create folder", () => saveFolder(name));
     setShowNewFolder(false);
   };
 
@@ -158,27 +229,7 @@ function App() {
       danger: true,
     });
     if (!confirmed) return;
-    await deleteFolder(name);
-    const updated = await loadPalettes();
-    setData(updated);
-  };
-
-  const handlePaletteUpdated = async () => {
-    const updated = await loadPalettes();
-    setData(updated);
-  };
-
-  const handleAddColor = async (hex: string) => {
-    if (!selectedPalette || selectedPalette.locked) return;
-    if (remainingCapacity(selectedPalette) < 1) return;
-    const updated = {
-      ...selectedPalette,
-      colors: [...selectedPalette.colors, { hex }],
-    };
-    await savePalette(updated);
-    const refreshed = await loadPalettes();
-    setData(refreshed);
-    setShowColorPicker(false);
+    await mutate("delete folder", () => deleteFolder(name));
   };
 
   /**
@@ -203,8 +254,7 @@ function App() {
       const palette = newPalette(opts.newName ?? "Imported Palette");
       palette.colors = hexes.map((hex) => ({ hex }));
       if (opts.author) palette.author = opts.author;
-      await savePalette(palette);
-      setData(await loadPalettes());
+      await mutate("import palette", () => savePalette(palette));
       setSelectedId(palette.id);
       return;
     }
@@ -238,11 +288,12 @@ function App() {
       incoming = wanted.slice(0, room);
     }
 
-    await savePalette({
-      ...target,
-      colors: [...target.colors, ...incoming.map((hex) => ({ hex }))],
-    });
-    setData(await loadPalettes());
+    await mutate("import colors", () =>
+      savePalette({
+        ...target,
+        colors: [...target.colors, ...incoming.map((hex) => ({ hex }))],
+      }),
+    );
   };
 
   /**
@@ -317,6 +368,12 @@ function App() {
 
   useHotkeys({
     escape: closeTopModal,
+    // Undo/redo stay live even with a dialog open -- they act on saved data, not
+    // on the dialog. Note these never fire while you're typing in a field, so
+    // Ctrl+Z inside the notes box is still ordinary text undo, as it should be.
+    "mod+z": handleUndo,
+    "mod+shift+z": handleRedo,
+    "mod+y": handleRedo,
     // While a dialog is up, the only shortcut that should still fire is the one
     // that dismisses it -- otherwise Ctrl+N would stack a second modal behind
     // the first.
@@ -430,12 +487,37 @@ function App() {
         onDeleteFolder={handleDeleteFolder}
         onNewPalette={() => setShowNewPalette(true)}
         onNewFolder={() => setShowNewFolder(true)}
-        onUpdated={handlePaletteUpdated}
+        onMutate={mutate}
       />
 
       {/* Main Area */}
       <div className="main">
         <div className="main-toolbar">
+          <button
+            className="btn"
+            onClick={handleUndo}
+            disabled={!canUndo(history)}
+            title={
+              canUndo(history)
+                ? `Undo ${undoLabel(history)} (Ctrl+Z)`
+                : "Nothing to undo"
+            }
+          >
+            ↶ Undo
+          </button>
+          <button
+            className="btn"
+            onClick={handleRedo}
+            disabled={!canRedo(history)}
+            title={
+              canRedo(history)
+                ? `Redo ${redoLabel(history)} (Ctrl+Shift+Z)`
+                : "Nothing to redo"
+            }
+          >
+            ↷ Redo
+          </button>
+          <span className="toolbar-divider" />
           <button className="btn" onClick={() => setShowImportPng(true)}>
             Import PNG
           </button>
@@ -475,7 +557,6 @@ function App() {
             <PaletteView
               key={selectedPalette.id}
               palette={selectedPalette}
-              onUpdated={handlePaletteUpdated}
               onAddColor={() => setShowColorPicker(true)}
               onExportClick={() => setShowExportMenu((s) => !s)}
               swatchStyle={swatchStyle}
@@ -483,6 +564,9 @@ function App() {
               onRemoveColor={handleRemoveColor}
               onToggleLock={handleToggleLock}
               onGenerateRamp={setRampBaseColor}
+              onRenamePalette={handleRenamePalette}
+              onRenameColor={handleRenameColor}
+              onSaveNotes={handleSaveNotes}
               viewMode={viewMode}
               onViewModeChange={setViewMode}
             />
@@ -772,7 +856,6 @@ function SwatchLabel({
 }
 function PaletteView({
   palette,
-  onUpdated,
   onAddColor,
   onExportClick,
   swatchStyle,
@@ -780,11 +863,13 @@ function PaletteView({
   onRemoveColor,
   onToggleLock,
   onGenerateRamp,
+  onRenamePalette,
+  onRenameColor,
+  onSaveNotes,
   viewMode,
   onViewModeChange,
 }: {
   palette: Palette;
-  onUpdated: () => void;
   onAddColor: () => void;
   onExportClick: () => void;
   swatchStyle: "squares" | "circles" | "bar";
@@ -792,6 +877,9 @@ function PaletteView({
   onRemoveColor: (index: number) => void;
   onToggleLock: () => void;
   onGenerateRamp: (hex: string) => void;
+  onRenamePalette: (name: string) => void;
+  onRenameColor: (index: number, name: string | undefined) => void;
+  onSaveNotes: (notes: string | undefined) => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
 }) {
@@ -800,6 +888,22 @@ function PaletteView({
   const [segmentWidth, setSegmentWidth] = useState(999);
   const [editingTitle, setEditingTitle] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>("default");
+
+  // The note is edited locally and committed on blur. Saving per keystroke
+  // would push one undo entry per character typed.
+  const [noteDraft, setNoteDraft] = useState(palette.notes ?? "");
+
+  // Re-sync when the stored note changes underneath us -- an undo can rewrite
+  // it while this component stays mounted, since the key is only palette.id.
+  useEffect(() => {
+    setNoteDraft(palette.notes ?? "");
+  }, [palette.id, palette.notes]);
+
+  const commitNote = () => {
+    const next = noteDraft.trim() === "" ? undefined : noteDraft;
+    if ((palette.notes ?? "") === (next ?? "")) return; // nothing changed
+    onSaveNotes(next);
+  };
   // Each entry carries the color's real position in palette.colors, so sorting
   // the view never misdirects an edit at the wrong slot on disk.
   const displayColors = sortColors(palette.colors, sortMode);
@@ -835,11 +939,9 @@ function PaletteView({
             value={editingTitle}
             autoFocus
             onChange={(e) => setEditingTitle(e.target.value)}
-            onBlur={async () => {
+            onBlur={() => {
               if (editingTitle.trim() && editingTitle.trim() !== palette.name) {
-                const updated = { ...palette, name: editingTitle.trim() };
-                await savePalette(updated);
-                onUpdated();
+                onRenamePalette(editingTitle.trim());
               }
               setEditingTitle(null);
             }}
@@ -947,12 +1049,9 @@ function PaletteView({
           <textarea
             className="palette-notes"
             placeholder="Add a note about this palette…"
-            value={palette.notes ?? ""}
-            onChange={async (e) => {
-              const updated = { ...palette, notes: e.target.value };
-              await savePalette(updated);
-              onUpdated();
-            }}
+            value={noteDraft}
+            onChange={(e) => setNoteDraft(e.target.value)}
+            onBlur={commitNote}
             rows={1}
             spellCheck={false}
           />
@@ -1086,14 +1185,7 @@ function PaletteView({
                     color={color}
                     copied={copiedHex === color.hex}
                     locked={palette.locked}
-                    onRename={async (name) => {
-                      const updatedColors = palette.colors.map((c, i) =>
-                        i === index ? { ...c, name: name || undefined } : c,
-                      );
-                      const updated = { ...palette, colors: updatedColors };
-                      await savePalette(updated);
-                      onUpdated();
-                    }}
+                    onRename={(name) => onRenameColor(index, name || undefined)}
                   />
                   {!palette.locked && (
                     <button

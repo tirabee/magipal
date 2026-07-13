@@ -1,5 +1,7 @@
 /** The single source of truth for what's bound — the help list can't drift. */
 export const SHORTCUTS: { keys: string[]; description: string }[] = [
+  { keys: ["Ctrl", "Z"], description: "Undo" },
+  { keys: ["Ctrl", "Shift", "Z"], description: "Redo" },
   { keys: ["Ctrl", "N"], description: "New palette" },
   { keys: ["Ctrl", "Shift", "N"], description: "New folder" },
   { keys: ["Ctrl", "I"], description: "Import hex codes" },

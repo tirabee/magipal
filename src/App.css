@@ -284,6 +284,13 @@ body {
 .empty-state-text {
   font-size: 12px;
 }
+.toolbar-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border);
+  margin: 2px 4px;
+}
+
 /* ── Keyboard Shortcuts ── */
 .shortcut-list {
   display: flex;
