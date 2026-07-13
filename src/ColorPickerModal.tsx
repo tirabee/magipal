@@ -204,8 +204,13 @@ export function ColorPickerModal({ initialColor = '#ff0000', onConfirm, onClose,
   }, [currentHex])
 
   const handleHexInput = (raw: string) => {
-    setHexInput(raw)
-    const hex = raw.startsWith('#') ? raw : `#${raw}`
+    // The '#' is a separate label, so this field holds digits only. Discard
+    // anything that isn't a hex digit before capping the length -- pasting
+    // "#c47a6f" must not spend one of the six slots on the '#' and drop the
+    // trailing 'f'. Also tolerates whitespace and quotes from a sloppy copy.
+    const digits = raw.replace(/[^0-9a-fA-F]/g, '').slice(0, 6)
+    setHexInput(digits)
+    const hex = `#${digits}`
     if (isValidHex(hex)) {
       const [r, g, b] = hexToRgb(hex)
       const [h, s, v] = rgbToHsv(r, g, b)
@@ -268,7 +273,6 @@ export function ColorPickerModal({ initialColor = '#ff0000', onConfirm, onClose,
                 className="picker-hex-input"
                 value={hexInput.replace('#', '')}
                 onChange={e => handleHexInput(e.target.value)}
-                maxLength={6}
                 spellCheck={false}
               />
             </div>
