@@ -39,7 +39,7 @@ fn set_titlebar_color(_window: &tauri::WebviewWindow) {}
 
 // ── Data structures ──────────────────────────────────────────────
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 struct Color {
     hex: String,
     name: Option<String>,
@@ -146,10 +146,22 @@ fn load_palettes(app: tauri::AppHandle) -> Result<AppData, String> {
     load_data(&app)
 }
 
+/// The lock lives here rather than at each UI call site, so no frontend path --
+/// present or future -- can add colors to a locked palette by forgetting to
+/// check. Unlocking goes through toggle_palette_lock, which is unaffected.
+/// Name and notes are deliberately still editable; the lock protects the colors.
+fn check_lock(existing: &Palette, incoming: &Palette) -> Result<(), String> {
+    if existing.locked.unwrap_or(false) && existing.colors != incoming.colors {
+        return Err("This palette is locked. Unlock it before changing its colors.".to_string());
+    }
+    Ok(())
+}
+
 #[tauri::command]
 fn save_palette(app: tauri::AppHandle, palette: Palette) -> Result<(), String> {
     let mut data = load_data(&app)?;
     if let Some(existing) = data.palettes.iter_mut().find(|p| p.id == palette.id) {
+        check_lock(existing, &palette)?;
         *existing = palette;
     } else {
         data.palettes.push(palette);
@@ -562,6 +574,57 @@ mod tests {
             .collect();
         assert_eq!(salvaged.len(), 1, "damaged bytes must be preserved");
         assert_eq!(fs::read_to_string(salvaged[0].path()).unwrap(), junk);
+    }
+
+    fn locked(mut p: Palette) -> Palette {
+        p.locked = Some(true);
+        p
+    }
+
+    fn with_colors(mut p: Palette, hexes: &[&str]) -> Palette {
+        p.colors = hexes
+            .iter()
+            .map(|h| Color {
+                hex: h.to_string(),
+                name: None,
+            })
+            .collect();
+        p
+    }
+
+    #[test]
+    fn locked_palette_refuses_added_colors() {
+        let existing = locked(with_colors(palette("Shipped"), &["#ff0000"]));
+        let incoming = with_colors(palette("Shipped"), &["#ff0000", "#00ff00"]);
+        assert!(check_lock(&existing, &incoming).is_err());
+    }
+
+    #[test]
+    fn locked_palette_refuses_removed_or_edited_colors() {
+        let existing = locked(with_colors(palette("Shipped"), &["#ff0000", "#00ff00"]));
+
+        let removed = with_colors(palette("Shipped"), &["#ff0000"]);
+        assert!(check_lock(&existing, &removed).is_err());
+
+        let edited = with_colors(palette("Shipped"), &["#ff0000", "#0000ff"]);
+        assert!(check_lock(&existing, &edited).is_err());
+    }
+
+    #[test]
+    fn locked_palette_still_accepts_notes_and_rename() {
+        // The lock protects the colors, not the metadata.
+        let existing = locked(with_colors(palette("Shipped"), &["#ff0000"]));
+        let mut renamed = with_colors(palette("Shipped"), &["#ff0000"]);
+        renamed.name = "Shipped v2".into();
+        renamed.notes = Some("final".into());
+        assert!(check_lock(&existing, &renamed).is_ok());
+    }
+
+    #[test]
+    fn unlocked_palette_accepts_color_changes() {
+        let existing = with_colors(palette("Draft"), &["#ff0000"]);
+        let incoming = with_colors(palette("Draft"), &["#ff0000", "#00ff00"]);
+        assert!(check_lock(&existing, &incoming).is_ok());
     }
 
     #[test]
