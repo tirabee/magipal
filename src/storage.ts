@@ -108,11 +108,6 @@ export async function togglePaletteLock(id: string): Promise<void> {
   return invoke('toggle_palette_lock', { id })
 }
 
-export async function pickColorFromScreen(): Promise<string | null> {
-  return invoke('pick_color_from_screen')
-}
-
-
 // ── Helpers ──────────────────────────────────────────────────────
 
 export function newPalette(

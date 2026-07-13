@@ -1,12 +1,27 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { readFileSync } from "node:fs";
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
+// tauri.conf.json is the authoritative version: it is what gets stamped into the
+// binary and what the updater compares against. (Its `version` field only accepts
+// a literal semver -- pointing it at package.json silently falls back to the
+// Cargo.toml version instead, which is a great way to ship a 0.9.0 labelled
+// 0.1.0.) The frontend reads the same file so the status bar can never disagree
+// with the app it is running in; version.test.ts keeps the other two in step.
+const { version } = JSON.parse(
+  readFileSync("./src-tauri/tauri.conf.json", "utf-8"),
+);
+
 // https://vite.dev/config/
 export default defineConfig(async () => ({
   plugins: [react()],
+
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+  },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //

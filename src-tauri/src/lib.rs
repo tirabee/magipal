@@ -390,36 +390,6 @@ fn rename_folder(app: tauri::AppHandle, old_name: String, new_name: String) -> R
 }
 
 #[tauri::command]
-async fn pick_color_from_screen() -> Result<Option<String>, String> {
-    use std::process::Command;
-
-    // Use PowerShell to invoke the Windows color picker
-    let output = Command::new("powershell")
-        .args([
-            "-Command",
-            r#"
-            Add-Type -AssemblyName System.Windows.Forms
-            Add-Type -AssemblyName System.Drawing
-            $dialog = New-Object System.Windows.Forms.ColorDialog
-            $dialog.FullOpen = $true
-            if ($dialog.ShowDialog() -eq 'OK') {
-                $c = $dialog.Color
-                '{0:X2}{1:X2}{2:X2}' -f $c.R, $c.G, $c.B
-            }
-            "#,
-        ])
-        .output()
-        .map_err(|e| e.to_string())?;
-
-    let hex = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if hex.is_empty() {
-        Ok(None)
-    } else {
-        Ok(Some(format!("#{}", hex.to_lowercase())))
-    }
-}
-
-#[tauri::command]
 fn toggle_palette_lock(app: tauri::AppHandle, id: String) -> Result<(), String> {
     let mut data = load_data(&app)?;
     if let Some(p) = data.palettes.iter_mut().find(|p| p.id == id) {
@@ -738,7 +708,6 @@ pub fn run() {
             rename_folder,
             export_palette_ase,
             toggle_palette_lock,
-            pick_color_from_screen,
             fetch_lospec_palette,
         ])
         .run(tauri::generate_context!())

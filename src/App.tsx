@@ -583,7 +583,7 @@ function App() {
 
       {/* Status Bar */}
       <div className="statusbar">
-        <span className="statusbar-item">magipal v0.1.0</span>
+        <span className="statusbar-item">magipal v{__APP_VERSION__}</span>
         <span className="statusbar-item">{data.palettes.length} palettes</span>
         <span className="statusbar-item">
           ⦁ {data.palettes.reduce((acc, p) => acc + p.colors.length, 0)} colors
