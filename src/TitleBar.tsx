@@ -9,7 +9,7 @@ interface TitleBarProps {
   settingsOpen: boolean
 }
 
-export function TitleBar({ fileName, onSettingsClick, settingsOpen }: TitleBarProps) {
+export function TitleBar({ fileName, onSettingsClick }: TitleBarProps) {
   const [isMaximized, setIsMaximized] = useState(false)
 
   useEffect(() => {

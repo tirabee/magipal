@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Color,
   loadPalettes,
@@ -9,24 +9,28 @@ import {
   newPalette,
   togglePaletteLock,
 } from "./storage";
-import type { Palette, AppData } from "./storage";
+import type { Palette, AppData, LospecPalette } from "./storage";
 import { Sidebar } from "./Sidebar";
 import { ImportPngModal } from "./ImportPngModal";
 import { ColorPickerModal } from "./ColorPickerModal";
 import { EyedropperModal } from "./EyedropperModal";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeFile } from "@tauri-apps/plugin-fs";
-import { exportPaletteJson } from "./storage";
 import { usePreferences } from "./usePreferences";
 import { SettingsPopover } from "./SettingsPopover";
 import { ConfirmModal } from "./ConfirmModal";
 import { useConfirm } from "./useConfirm";
 import { InputModal } from "./InputModal";
-import { TitleBar } from "./TitleBar";
 import { ExportMenu } from "./ExportMenu";
 import { BulkImportModal } from "./BulkImportModal";
+import { LospecImportModal } from "./LospecImportModal";
+import { RampModal } from "./RampModal";
+import { DitherTestPanel } from "./DitherTest";
 import "./App.css";
 
+// Temporarily disabled: a Chromium/WebView2 regression freezes all mouse
+// input after EyeDropper.open() resolves. Fix already verified in Chrome
+// Beta, expected in stable Chromium 151 (~July 28, 2026).
+// Tracking: https://github.com/brave/brave-browser/issues/56888
+const EYEDROPPER_DISABLED = true;
 // ── App ──────────────────────────────────────────────────────────
 
 function App() {
@@ -48,22 +52,14 @@ function App() {
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
-
+  const [showLospecImport, setShowLospecImport] = useState(false);
+  const [rampBaseColor, setRampBaseColor] = useState<string | null>(null);
   // Load from disk on startup
   useEffect(() => {
     loadPalettes()
       .then(setData)
       .finally(() => setLoading(false));
   }, []);
-
-  const handleSort = async (mode: SortMode) => {
-    if (!selectedPalette) return;
-    const sorted = sortColors(selectedPalette.colors, mode);
-    const updated = { ...selectedPalette, colors: sorted };
-    await savePalette(updated);
-    const refreshed = await loadPalettes();
-    setData(refreshed);
-  };
 
   const handleToggleLock = async () => {
     if (!selectedPalette) return;
@@ -187,15 +183,15 @@ function App() {
     }
     setShowImportPng(false);
   };
-
   const handleEyedropper = async () => {
+    if (EYEDROPPER_DISABLED) return;
     try {
-      // @ts-ignore — EyeDropper is not in TS types yet
+      // @ts-ignore
       const eyeDropper = new EyeDropper();
       const result = await eyeDropper.open();
       setEyedropperColor(result.sRGBHex);
     } catch {
-      // User cancelled — no action needed
+      // User cancelled
     }
   };
 
@@ -225,17 +221,6 @@ function App() {
     setEyedropperColor(null);
   };
 
-  const handleExportJson = async () => {
-    if (!selectedPalette) return;
-    const json = await exportPaletteJson(selectedPalette.id);
-    const path = await save({
-      defaultPath: `${selectedPalette.name.replace(/\s+/g, "_")}.json`,
-      filters: [{ name: "JSON", extensions: ["json"] }],
-    });
-    if (!path) return;
-    await writeFile(path, new TextEncoder().encode(json));
-  };
-
   const handleBulkImport = async (
     colors: string[],
     destination: string,
@@ -262,6 +247,66 @@ function App() {
     setShowBulkImport(false);
   };
 
+  const handleLospecImport = async (
+    lospecPalette: LospecPalette,
+    destination: string,
+  ) => {
+    const colors = lospecPalette.colors.map((hex) => ({ hex: `#${hex}` }));
+
+    if (destination === "new") {
+      const palette = newPalette(lospecPalette.name);
+      palette.colors = colors;
+      palette.author = lospecPalette.author;
+      await savePalette(palette);
+      const updated = await loadPalettes();
+      setData(updated);
+      setSelectedId(palette.id);
+    } else {
+      const target = data.palettes.find((p) => p.id === destination);
+      if (!target) return;
+      const updated = {
+        ...target,
+        colors: [...target.colors, ...colors],
+      };
+      await savePalette(updated);
+      const refreshed = await loadPalettes();
+      setData(refreshed);
+    }
+    setShowLospecImport(false);
+  };
+
+  const handleRampImport = async (
+    colors: string[],
+    destination: string,
+    newName?: string,
+  ) => {
+    if (destination === "new") {
+      const palette = newPalette(newName ?? "Shade Ramp");
+      palette.colors = colors.map((hex) => ({ hex }));
+      await savePalette(palette);
+      const updated = await loadPalettes();
+      setData(updated);
+      setSelectedId(palette.id);
+    } else {
+      const target = data.palettes.find((p) => p.id === destination);
+      if (!target || target.locked) return;
+      const existingHexes = new Set(
+        target.colors.map((c) => c.hex.toLowerCase()),
+      );
+      const newColors = colors.filter(
+        (hex) => !existingHexes.has(hex.toLowerCase()),
+      );
+      const updated = {
+        ...target,
+        colors: [...target.colors, ...newColors.map((hex) => ({ hex }))],
+      };
+      await savePalette(updated);
+      const refreshed = await loadPalettes();
+      setData(refreshed);
+    }
+    setRampBaseColor(null);
+  };
+
   if (loading) {
     return (
       <div className="app">
@@ -278,29 +323,35 @@ function App() {
   return (
     <div className="app">
       {/* Title Bar */}
-      {/* Title Bar */}
-      <TitleBar
-        fileName={
-          selectedPalette ? selectedPalette.name : "no palette selected"
-        }
-        onSettingsClick={() => setShowSettings((s) => !s)}
-        settingsOpen={showSettings}
-      />
-      {showSettings && (
-        <SettingsPopover
-          theme={theme}
-          swatchStyle={swatchStyle}
-          onThemeChange={(t) => {
-            setTheme(t);
-            setShowSettings(false);
-          }}
-          onSwatchStyleChange={(s) => {
-            setSwatchStyle(s);
-            setShowSettings(false);
-          }}
-          onClose={() => setShowSettings(false)}
-        />
-      )}
+      <div className="titlebar" style={{ position: "relative" }}>
+        <span className="titlebar-name">Magipal</span>
+        <span className="titlebar-sep">—</span>
+        <span className="titlebar-file">
+          {selectedPalette ? selectedPalette.name : "no palette selected"}
+        </span>
+        <button
+          className="settings-btn"
+          onClick={() => setShowSettings((s) => !s)}
+          title="Settings"
+        >
+          ⚙️
+        </button>
+        {showSettings && (
+          <SettingsPopover
+            theme={theme}
+            swatchStyle={swatchStyle}
+            onThemeChange={(t) => {
+              setTheme(t);
+              setShowSettings(false);
+            }}
+            onSwatchStyleChange={(s) => {
+              setSwatchStyle(s);
+              setShowSettings(false);
+            }}
+            onClose={() => setShowSettings(false)}
+          />
+        )}
+      </div>
 
       {/* Sidebar */}
       <Sidebar
@@ -324,12 +375,27 @@ function App() {
           <button className="btn" onClick={() => setShowBulkImport(true)}>
             Import Hex
           </button>
-          <button className="btn">Import URL</button>
-          {/*<button className="btn">✨ AI Generate</button> */}
+          <button className="btn" onClick={() => setShowLospecImport(true)}>
+            Import{" "}
+            <svg
+              className="lospec-logo"
+              viewBox="0 0 83 20"
+              role="img"
+              aria-label="Lospec"
+              fill="currentColor"
+            >
+              <path d="M7 16H6V0H0v20h13v-7H7zm7 4h13V0H14v20zm6-16h1v12h-1V4zm15 4V4h1v3h5V0H28v12h7v4h-1v-3h-6v7h13V8zm7 12h6v-5h7V0H42v20zm6-16h1v7h-1V4zm8 16h13v-7h-6v3h-1v-4h7V8h-7V4h1v3h6V0H56zM83 8V0H70v20h13v-7h-6v3h-1V4h1v4z" />
+            </svg>
+          </button>
           <button
             className="eyedropper-btn"
             onClick={handleEyedropper}
-            title="Pick color from screen"
+            disabled={EYEDROPPER_DISABLED}
+            title={
+              EYEDROPPER_DISABLED
+                ? "Temporarily disabled — a Chromium bug freezes the app after picking a color. Fix expected late July 2026."
+                : "Pick color from screen"
+            }
           >
             🔍
           </button>
@@ -337,6 +403,7 @@ function App() {
         <div className="main-content">
           {selectedPalette ? (
             <PaletteView
+              key={selectedPalette.colors.map((c) => c.name).join(",")}
               palette={selectedPalette}
               onUpdated={handlePaletteUpdated}
               onAddColor={() => setShowColorPicker(true)}
@@ -345,7 +412,7 @@ function App() {
               onEditColor={setEditingColorIndex}
               onRemoveColor={handleRemoveColor}
               onToggleLock={handleToggleLock}
-              onSort={handleSort}
+              onGenerateRamp={setRampBaseColor}
             />
           ) : (
             <div className="empty-state">
@@ -455,56 +522,25 @@ function App() {
           onClose={() => setEyedropperColor(null)}
         />
       )}
-    </div>
-  );
-}
 
-// ── Palette Item (sidebar) ────────────────────────────────────────
+      {showLospecImport && (
+        <LospecImportModal
+          palettes={data.palettes}
+          currentPaletteId={selectedId}
+          onImport={handleLospecImport}
+          onClose={() => setShowLospecImport(false)}
+        />
+      )}
 
-function PaletteItem({
-  palette,
-  selected,
-  onSelect,
-  onDelete,
-  indented,
-}: {
-  palette: Palette;
-  selected: boolean;
-  onSelect: () => void;
-  onDelete: () => void;
-  indented?: boolean;
-}) {
-  return (
-    <div
-      className={`palette-item ${selected ? "active" : ""} ${indented ? "indented" : ""}`}
-      onClick={onSelect}
-    >
-      <div className="palette-item-swatches">
-        {palette.colors.slice(0, 5).map((c, i) => (
-          <div
-            key={i}
-            className="palette-item-swatch"
-            style={{ background: c.hex }}
-          />
-        ))}
-        {palette.colors.length === 0 && (
-          <div
-            className="palette-item-swatch"
-            style={{ background: "transparent" }}
-          />
-        )}
-      </div>
-      <span className="palette-item-name">{palette.name}</span>
-      <button
-        className="palette-delete"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        title="Delete palette"
-      >
-        ×
-      </button>
+      {rampBaseColor && (
+        <RampModal
+          baseColor={rampBaseColor}
+          palettes={data.palettes}
+          currentPaletteId={selectedId}
+          onImport={handleRampImport}
+          onClose={() => setRampBaseColor(null)}
+        />
+      )}
     </div>
   );
 }
@@ -547,10 +583,10 @@ function getLuminance(hex: string): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-type SortMode = "none" | "hue" | "saturation" | "lightness" | "luminance";
+type SortMode = "default" | "hue" | "saturation" | "lightness" | "luminance";
 
 function sortColors(colors: Color[], mode: SortMode): Color[] {
-  if (mode === "none") return colors;
+  if (mode === "default") return colors;
   return [...colors].sort((a, b) => {
     const [ah, as_, al] = hexToHsl(a.hex);
     const [bh, bs, bl] = hexToHsl(b.hex);
@@ -570,6 +606,69 @@ function sortColors(colors: Color[], mode: SortMode): Color[] {
 }
 // ── Palette View (main area) ──────────────────────────────────────
 
+function SwatchLabel({
+  color,
+  copied,
+  locked,
+  onRename,
+}: {
+  color: Color;
+  copied: boolean;
+  locked?: boolean;
+  onRename: (name: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  const startEditing = (e: React.MouseEvent) => {
+    if (locked) return;
+    e.stopPropagation();
+    setDraft(color.name ?? "");
+    setEditing(true);
+  };
+
+  const commitEdit = () => {
+    setEditing(false);
+    onRename(draft.trim());
+  };
+
+  if (copied) return <div className="swatch-hex">copied!</div>;
+
+  if (editing) {
+    return (
+      <div className="swatch-hex" style={{ background: color.hex }}>
+        <input
+          className="swatch-name-input"
+          value={draft}
+          autoFocus
+          placeholder={color.hex}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+            if (e.key === "Escape") setEditing(false);
+          }}
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="swatch-hex"
+      title={color.name ? `${color.name} — ${color.hex}` : "Click to add name"}
+      onClick={startEditing}
+      style={{ cursor: locked ? "default" : "text" }}
+    >
+      {color.name ? (
+        <span className="swatch-name">{color.name}</span>
+      ) : (
+        color.hex
+      )}
+    </div>
+  );
+}
 function PaletteView({
   palette,
   onUpdated,
@@ -579,7 +678,7 @@ function PaletteView({
   onEditColor,
   onRemoveColor,
   onToggleLock,
-  onSort,
+  onGenerateRamp,
 }: {
   palette: Palette;
   onUpdated: () => void;
@@ -589,33 +688,40 @@ function PaletteView({
   onEditColor: (index: number) => void;
   onRemoveColor: (index: number) => void;
   onToggleLock: () => void;
-  onSort: (mode: SortMode) => void;
+  onGenerateRamp: (hex: string) => void;
 }) {
   const [copiedHex, setCopiedHex] = useState<string | null>(null);
+  const [showDither, setShowDither] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
   const [segmentWidth, setSegmentWidth] = useState(999);
   const [editingTitle, setEditingTitle] = useState<string | null>(null);
-  const [sortMode, setSortMode] = useState<SortMode>("none");
-  const displayColors = sortColors(palette.colors, sortMode);
+  const [sortMode, setSortMode] = useState<SortMode>("default");
+  const originalColors = useMemo(() => [...palette.colors], [palette.id]);
+  const displayColors =
+    sortMode === "default"
+      ? originalColors
+      : sortColors(palette.colors, sortMode);
 
+  // Measure each bar segment so labels can flip to vertical when cramped.
   useEffect(() => {
-    if (!barRef.current || palette.colors.length === 0) return;
-    const updateWidth = () => {
-      const totalWidth = barRef.current!.offsetWidth;
-      setSegmentWidth(totalWidth / palette.colors.length);
+    if (swatchStyle !== "bar") return;
+    const el = barRef.current;
+    if (!el) return;
+    const measure = () => {
+      const count = displayColors.length;
+      setSegmentWidth(count > 0 ? el.clientWidth / count : 999);
     };
-    updateWidth();
-    const observer = new ResizeObserver(updateWidth);
-    observer.observe(barRef.current);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
     return () => observer.disconnect();
-  }, [palette.colors.length]);
+  }, [swatchStyle, displayColors.length]);
 
   const handleCopy = (hex: string) => {
     navigator.clipboard.writeText(hex);
     setCopiedHex(hex);
     setTimeout(() => setCopiedHex(null), 1500);
   };
-
   return (
     <div className="palette-view">
       <div className="palette-view-header" style={{ position: "relative" }}>
@@ -639,21 +745,29 @@ function PaletteView({
             }}
           />
         ) : (
-          <div
-            className="palette-view-name"
-            onDoubleClick={() => {
-              if (!palette.locked) setEditingTitle(palette.name);
-            }}
-            title={
-              palette.locked
-                ? "Locked — right-click palette to unlock"
-                : "Double-click to rename"
-            }
-          >
-            {palette.locked && <span style={{ marginRight: 8 }}>🔒</span>}
-            {palette.name}
+          <div className="palette-title-group">
+            <div
+              className="palette-view-name"
+              onDoubleClick={() => {
+                if (!palette.locked) setEditingTitle(palette.name);
+              }}
+              title={
+                palette.locked
+                  ? "Locked — right-click palette to unlock"
+                  : "Double-click to rename"
+              }
+            >
+              {palette.locked && <span style={{ marginRight: 8 }}>🔒</span>}
+              {palette.name}
+            </div>
+            {palette.author && (
+              <span className="palette-author-inline">
+                via Lospec · by {palette.author}
+              </span>
+            )}
           </div>
         )}
+
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <select
             className="sort-select"
@@ -661,21 +775,19 @@ function PaletteView({
             onChange={(e) => setSortMode(e.target.value as SortMode)}
             title="Sort colors"
           >
-            <option value="none">Sort: none</option>
+            <option value="default">Sort: default</option>
             <option value="hue">Sort: hue</option>
             <option value="saturation">Sort: saturation</option>
             <option value="lightness">Sort: lightness</option>
             <option value="luminance">Sort: luminance</option>
           </select>
-          {sortMode !== "none" && !palette.locked && (
-            <button
-              className="btn"
-              onClick={() => onSort(sortMode)}
-              title="Save this sort order permanently"
-            >
-              ✓ Save Order
-            </button>
-          )}
+          <button
+            className={`btn ${showDither ? "btn-accent" : ""}`}
+            onClick={() => setShowDither((s) => !s)}
+            title="Toggle dither test view"
+          >
+            🎲 Dither
+          </button>
           <button
             className={`btn ${palette.locked ? "btn-accent" : ""}`}
             onClick={onToggleLock}
@@ -693,113 +805,178 @@ function PaletteView({
           )}
         </div>
       </div>
-      <div
-        className={`palette-swatches ${swatchStyle === "bar" ? "palette-swatches-bar" : ""}`}
-      >
-        {swatchStyle === "bar" ? (
-          // Continuous bar view
-          <div className="swatch-bar-wrap" ref={barRef}>
-            <div className="swatch-bar">
-              {displayColors.map((color, i) => {
-                const isDuplicate = palette.colors.some(
-                  (c, j) =>
-                    j !== i && c.hex.toLowerCase() === color.hex.toLowerCase(),
-                );
-                return (
+      {/* Palette Notes */}
+      <div className="palette-notes-wrap">
+        {!palette.locked ? (
+          <textarea
+            className="palette-notes"
+            placeholder="Add a note about this palette…"
+            value={palette.notes ?? ""}
+            onChange={async (e) => {
+              const updated = { ...palette, notes: e.target.value };
+              await savePalette(updated);
+              onUpdated();
+            }}
+            rows={1}
+            spellCheck={false}
+          />
+        ) : (
+          palette.notes && (
+            <div className="palette-notes-readonly">{palette.notes}</div>
+          )
+        )}
+      </div>
+      {showDither ? (
+        <DitherTestPanel colors={displayColors} />
+      ) : (
+        <div
+          className={`palette-swatches ${swatchStyle === "bar" ? "palette-swatches-bar" : ""}`}
+        >
+          {swatchStyle === "bar" ? (
+            // Continuous bar view
+            <div className="swatch-bar-wrap" ref={barRef}>
+              <div className="swatch-bar">
+                {displayColors.map((color, i) => {
+                  const isDuplicate =
+                    displayColors.filter(
+                      (c, j) =>
+                        j !== i &&
+                        c.hex.toLowerCase() === color.hex.toLowerCase(),
+                    ).length > 1;
+                  return (
+                    <div
+                      key={i}
+                      className="swatch-bar-segment"
+                      style={{ background: color.hex, flex: 1 }}
+                      onClick={() => handleCopy(color.hex)}
+                      onDoubleClick={() => onEditColor(i)}
+                      title="Click to copy · Double-click to edit"
+                    >
+                      {isDuplicate && (
+                        <div className="swatch-duplicate-badge">⚠</div>
+                      )}
+                      {!palette.locked && (
+                        <button
+                          className="bar-segment-remove"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemoveColor(i);
+                          }}
+                          title="Remove color"
+                        >
+                          ×
+                        </button>
+                      )}
+                      <button
+                        className="swatch-ramp-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onGenerateRamp(color.hex);
+                        }}
+                        title="Generate shade/highlight ramp"
+                      >
+                        🌗
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="swatch-bar-labels">
+                {displayColors.map((color, i) => (
+                  <div key={i} className="swatch-bar-label" style={{ flex: 1 }}>
+                    <span
+                      className={
+                        segmentWidth < 40
+                          ? "label-vertical"
+                          : "label-horizontal"
+                      }
+                    >
+                      {copiedHex === color.hex ? "✓" : color.hex}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            // Squares or circles view
+            displayColors.map((color, i) => {
+              const isDuplicate =
+                displayColors.filter(
+                  (c) => c.hex.toLowerCase() === color.hex.toLowerCase(),
+                ).length > 1;
+              return (
+                <div
+                  key={i}
+                  className={`swatch-card ${swatchStyle === "circles" ? "swatch-card-circle" : ""}`}
+                >
+                  {" "}
                   <div
-                    key={i}
-                    className="swatch-bar-segment"
-                    style={{ background: color.hex, flex: 1 }}
+                    className={`swatch-color ${swatchStyle === "circles" ? "swatch-circle" : ""}`}
+                    style={{ background: color.hex }}
                     onClick={() => handleCopy(color.hex)}
-                    onDoubleClick={() => onEditColor(i)}
-                    title="Click to copy · Double-click to edit"
+                    onDoubleClick={() => {
+                      if (!palette.locked) onEditColor(i);
+                    }}
+                    title={
+                      palette.locked
+                        ? "Click to copy"
+                        : "Click to copy · Double-click to edit"
+                    }
                   >
                     {isDuplicate && (
                       <div className="swatch-duplicate-badge">⚠</div>
                     )}
-                    {!palette.locked && (
-                      <button
-                        className="bar-segment-remove"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRemoveColor(i);
-                        }}
-                        title="Remove color"
-                      >
-                        ×
-                      </button>
-                    )}
+                    <button
+                      className="swatch-ramp-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onGenerateRamp(color.hex);
+                      }}
+                      title="Generate shade/highlight ramp"
+                    >
+                      🌗
+                    </button>
                   </div>
-                );
-              })}
-            </div>
-            <div className="swatch-bar-labels">
-              {displayColors.map((color, i) => (
-                <div key={i} className="swatch-bar-label" style={{ flex: 1 }}>
-                  <span
-                    className={
-                      segmentWidth < 40 ? "label-vertical" : "label-horizontal"
-                    }
-                  >
-                    {copiedHex === color.hex ? "✓" : color.hex}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          // Squares or circles view
-          displayColors.map((color, i) => {
-            const isDuplicate = palette.colors.some(
-              (c, j) =>
-                j !== i && c.hex.toLowerCase() === color.hex.toLowerCase(),
-            );
-            return (
-              <div
-                key={i}
-                className={`swatch-card ${swatchStyle === "circles" ? "swatch-card-circle" : ""}`}
-              >
-                {" "}
-                <div
-                  className={`swatch-color ${swatchStyle === "circles" ? "swatch-circle" : ""}`}
-                  style={{ background: color.hex }}
-                  onClick={() => handleCopy(color.hex)}
-                  onDoubleClick={() => {
-                    if (!palette.locked) onEditColor(i);
-                  }}
-                  title="Click to copy · Double-click to edit"
-                >
-                  {isDuplicate && (
-                    <div className="swatch-duplicate-badge">⚠</div>
+                  <SwatchLabel
+                    color={color}
+                    copied={copiedHex === color.hex}
+                    locked={palette.locked}
+                    onRename={async (name) => {
+                      const updatedColors = palette.colors.map((c) =>
+                        c.hex === color.hex && c.name === color.name
+                          ? { ...c, name: name || undefined }
+                          : c,
+                      );
+                      const updated = { ...palette, colors: updatedColors };
+                      await savePalette(updated);
+                      onUpdated();
+                    }}
+                  />
+                  {!palette.locked && (
+                    <button
+                      className="swatch-remove"
+                      onClick={() => onRemoveColor(i)}
+                      title="Remove color"
+                    >
+                      ×
+                    </button>
                   )}
                 </div>
-                <div className="swatch-hex">
-                  {copiedHex === color.hex ? "copied!" : color.hex}
-                </div>
-                {!palette.locked && (
-                  <button
-                    className="swatch-remove"
-                    onClick={() => onRemoveColor(i)}
-                    title="Remove color"
-                  >
-                    ×
-                  </button>
-                )}
+              );
+            })
+          )}
+          {palette.colors.length === 0 && (
+            <div
+              className="empty-state"
+              style={{ height: "auto", paddingTop: 40 }}
+            >
+              <div className="empty-state-text">
+                no colors yet — add one above
               </div>
-            );
-          })
-        )}
-        {palette.colors.length === 0 && (
-          <div
-            className="empty-state"
-            style={{ height: "auto", paddingTop: 40 }}
-          >
-            <div className="empty-state-text">
-              no colors yet — add one above
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

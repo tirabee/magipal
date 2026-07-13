@@ -15,6 +15,8 @@ export interface Palette {
   created_at: number
   order?: number
   locked?: boolean
+  notes?: string
+  author?:string
 }
 
 export interface AppData {
@@ -91,6 +93,12 @@ export async function exportPaletteAse(paletteId: string): Promise<number[]> {
 export async function togglePaletteLock(id: string): Promise<void> {
   return invoke('toggle_palette_lock', { id })
 }
+
+export async function pickColorFromScreen(): Promise<string | null> {
+  return invoke('pick_color_from_screen')
+}
+
+
 // ── Helpers ──────────────────────────────────────────────────────
 
 export function newPalette(name: string, folder?: string): Palette {
@@ -101,4 +109,15 @@ export function newPalette(name: string, folder?: string): Palette {
     folder,
     created_at: Date.now(),
   }
+}
+
+
+export interface LospecPalette {
+  name: string
+  author: string
+  colors: string[] // hex without '#'
+}
+
+export async function fetchLospecPalette(slug: string): Promise<LospecPalette> {
+  return invoke('fetch_lospec_palette', { slug })
 }

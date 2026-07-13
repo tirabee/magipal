@@ -10,8 +10,8 @@
 - [x] Manual color picker (within app)
 - [x] Persist palettes to disk (local JSON file)
 - [x] Lock/unlock feature for palettes
-- [ ] Add Dither Test to palette view
-- [ ] Analagous palette generation
+- [x] Add Dither Test to palette view
+- [x] Analagous palette generation
 
 ## Organization
 
@@ -21,7 +21,7 @@
 ## Import
 
 - [x] Import palette from PNG swatch grid
-- [ ] Import palette from URL (colourlovers etc.)
+- [x] Import palette from Lospec URL/slug
 
 ## Color Tools
 

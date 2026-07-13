@@ -2,6 +2,41 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use tauri::Manager;
 
+// ── Windows Title Bar Config ────────────────────────────────────────
+#[cfg(target_os = "windows")]
+fn set_titlebar_color(window: &tauri::WebviewWindow) {
+    use windows::Win32::Foundation::COLORREF;
+    use windows::Win32::Graphics::Dwm::{
+        DwmSetWindowAttribute, DWMWA_CAPTION_COLOR, DWMWA_TEXT_COLOR,
+    };
+
+    if let Ok(hwnd) = window.hwnd() {
+        unsafe {
+            // COLORREF is 0x00BBGGRR — reversed from normal hex
+            // --bg-panel: #16213e
+            let caption_color = COLORREF(0x003e2116);
+            let _ = DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_CAPTION_COLOR,
+                &caption_color as *const _ as *const _,
+                std::mem::size_of::<COLORREF>() as u32,
+            );
+
+            // --text-primary: #e8e8f0
+            let text_color = COLORREF(0x00f0e8e8);
+            let _ = DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_TEXT_COLOR,
+                &text_color as *const _ as *const _,
+                std::mem::size_of::<COLORREF>() as u32,
+            );
+        }
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn set_titlebar_color(_window: &tauri::WebviewWindow) {}
+
 // ── Data structures ──────────────────────────────────────────────
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -19,6 +54,8 @@ struct Palette {
     created_at: u64,
     order: Option<i64>,
     locked: Option<bool>,
+    notes: Option<String>,
+    author: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -181,12 +218,14 @@ fn add_recent_color(app: tauri::AppHandle, hex: String) -> Result<(), String> {
 #[tauri::command]
 fn export_palette_json(app: tauri::AppHandle, palette_id: String) -> Result<String, String> {
     let data = load_data(&app);
-    let palette = data.palettes
+    let palette = data
+        .palettes
         .iter()
         .find(|p| p.id == palette_id)
         .ok_or("Palette not found")?;
-    
-    let mut rgb_arrays: Vec<[u8; 3]> = palette.colors
+
+    let mut rgb_arrays: Vec<[u8; 3]> = palette
+        .colors
         .iter()
         .filter_map(|c| {
             let hex = c.hex.trim_start_matches('#');
@@ -272,6 +311,36 @@ fn rename_folder(app: tauri::AppHandle, old_name: String, new_name: String) -> R
 }
 
 #[tauri::command]
+async fn pick_color_from_screen() -> Result<Option<String>, String> {
+    use std::process::Command;
+
+    // Use PowerShell to invoke the Windows color picker
+    let output = Command::new("powershell")
+        .args([
+            "-Command",
+            r#"
+            Add-Type -AssemblyName System.Windows.Forms
+            Add-Type -AssemblyName System.Drawing
+            $dialog = New-Object System.Windows.Forms.ColorDialog
+            $dialog.FullOpen = $true
+            if ($dialog.ShowDialog() -eq 'OK') {
+                $c = $dialog.Color
+                '{0:X2}{1:X2}{2:X2}' -f $c.R, $c.G, $c.B
+            }
+            "#,
+        ])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    let hex = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if hex.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(format!("#{}", hex.to_lowercase())))
+    }
+}
+
+#[tauri::command]
 fn toggle_palette_lock(app: tauri::AppHandle, id: String) -> Result<(), String> {
     let mut data = load_data(&app);
     if let Some(p) = data.palettes.iter_mut().find(|p| p.id == id) {
@@ -283,7 +352,8 @@ fn toggle_palette_lock(app: tauri::AppHandle, id: String) -> Result<(), String> 
 #[tauri::command]
 fn export_palette_ase(app: tauri::AppHandle, palette_id: String) -> Result<Vec<u8>, String> {
     let data = load_data(&app);
-    let palette = data.palettes
+    let palette = data
+        .palettes
         .iter()
         .find(|p| p.id == palette_id)
         .ok_or("Palette not found")?;
@@ -302,7 +372,8 @@ fn export_palette_ase(app: tauri::AppHandle, palette_id: String) -> Result<Vec<u
     {
         blocks.extend_from_slice(&[0xc0, 0x01]); // block type: group start
         let group_name = &palette.name;
-        let group_utf16: Vec<u16> = group_name.encode_utf16()
+        let group_utf16: Vec<u16> = group_name
+            .encode_utf16()
             .chain(std::iter::once(0))
             .collect();
         let mut group_body: Vec<u8> = Vec::new();
@@ -318,7 +389,9 @@ fn export_palette_ase(app: tauri::AppHandle, palette_id: String) -> Result<Vec<u
     // Color blocks
     for color in &palette.colors {
         let hex = color.hex.trim_start_matches('#');
-        if hex.len() != 6 { continue; }
+        if hex.len() != 6 {
+            continue;
+        }
         let r = u8::from_str_radix(&hex[0..2], 16).map_err(|e| e.to_string())? as f32 / 255.0;
         let g = u8::from_str_radix(&hex[2..4], 16).map_err(|e| e.to_string())? as f32 / 255.0;
         let b = u8::from_str_radix(&hex[4..6], 16).map_err(|e| e.to_string())? as f32 / 255.0;
@@ -329,9 +402,7 @@ fn export_palette_ase(app: tauri::AppHandle, palette_id: String) -> Result<Vec<u
 
         // Color name: use custom name if set, otherwise hex without #
         let name = color.name.as_deref().unwrap_or(hex);
-        let name_utf16: Vec<u16> = name.encode_utf16()
-            .chain(std::iter::once(0))
-            .collect();
+        let name_utf16: Vec<u16> = name.encode_utf16().chain(std::iter::once(0)).collect();
         body.extend_from_slice(&(name_utf16.len() as u16).to_be_bytes());
         for unit in name_utf16 {
             body.extend_from_slice(&unit.to_be_bytes());
@@ -366,6 +437,30 @@ fn export_palette_ase(app: tauri::AppHandle, palette_id: String) -> Result<Vec<u
     Ok(bytes)
 }
 // ── App entry ────────────────────────────────────────────────────
+#[derive(Serialize, Deserialize, Clone)]
+struct LospecPaletteResponse {
+    name: String,
+    author: String,
+    colors: Vec<String>,
+}
+
+#[tauri::command]
+async fn fetch_lospec_palette(slug: String) -> Result<LospecPaletteResponse, String> {
+    let url = format!("https://lospec.com/palette-list/{}.json", slug);
+    let response = reqwest::get(&url).await.map_err(|e| e.to_string())?;
+
+    if response.status().as_u16() == 404 {
+        return Err("No palette found with that name. Double-check it matches the Lospec URL slug exactly (e.g. 'nintendo-gameboy-bgb').".to_string());
+    }
+    if !response.status().is_success() {
+        return Err(format!("Lospec returned an error ({})", response.status()));
+    }
+
+    response
+        .json::<LospecPaletteResponse>()
+        .await
+        .map_err(|e| e.to_string())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -373,6 +468,11 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            let window = app.get_webview_window("main").unwrap();
+            set_titlebar_color(&window);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             load_palettes,
             save_palette,
@@ -391,6 +491,8 @@ pub fn run() {
             rename_folder,
             export_palette_ase,
             toggle_palette_lock,
+            pick_color_from_screen,
+            fetch_lospec_palette,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")

@@ -1,7 +1,6 @@
 import {
   DndContext,
   DragEndEvent,
-  DragOverEvent,
   DragOverlay,
   DragStartEvent,
   PointerSensor,
@@ -31,13 +30,12 @@ interface SidebarProps {
 
 // ── Draggable Palette Item ────────────────────────────────────────
 
-function DraggablePaletteItem({ palette, selected, onSelect, onDelete, indented, isOver, onRename, onToggleLock }: {
+function DraggablePaletteItem({ palette, selected, onSelect, onDelete, indented, onRename, onToggleLock }: {
   palette: Palette
   selected: boolean
   onSelect: () => void
   onDelete: () => void
   indented?: boolean
-  isOver?: boolean
   onRename: (newName: string) => void
   onToggleLock: () => void
 }) {
@@ -309,7 +307,6 @@ const handleRenameFolder = async (oldName: string, newName: string) => {
     if (!over) return
 
     const activeId = String(active.id)
-    const overId = String(over.id)
     const activeData = active.data.current
     const overData = over.data.current
 

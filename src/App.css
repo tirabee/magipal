@@ -61,23 +61,8 @@ body {
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: 0;
-  position: relative;
-  user-select: none;
-}
-
-.titlebar-drag-area {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
   padding: 0 12px;
-  height: 100%;
-}
-
-.titlebar-controls {
-  display: flex;
-  height: 100%;
+  gap: 8px;
 }
 
 .titlebar-btn {
@@ -260,6 +245,18 @@ body {
   padding: 16px;
 }
 
+.lospec-logo {
+  height: 12px;
+  width: auto;
+  vertical-align: middle;
+  margin-left: 2px;
+  color: #eaeaea;
+}
+
+:root[data-theme="light"] .lospec-logo {
+  color: #332f35;
+}
+
 .main-content::-webkit-scrollbar {
   width: 6px;
 }
@@ -331,6 +328,10 @@ body {
   cursor: pointer;
   border: 1px solid var(--border);
   background: var(--bg-panel);
+  min-width: 80px;
+  max-width: 160px;
+  width: max-content;
+  flex-shrink: 0;
 }
 
 .swatch-card:hover {
@@ -338,8 +339,11 @@ body {
 }
 
 .swatch-color {
-  width: 80px;
+  min-width: 80px;
+  width: 100%;
   height: 80px;
+  flex-shrink: 0;
+  position: relative;
 }
 
 .swatch-hex {
@@ -348,6 +352,16 @@ body {
   color: var(--text-secondary);
   text-align: center;
   border-top: 1px solid var(--border);
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--bg-panel) !important;
+  min-width: 80px;
+  width: 100%;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .swatch-card:hover .swatch-hex {
@@ -446,7 +460,7 @@ body {
 
 /* ── Swatch remove button ── */
 .swatch-remove {
-  background: none;
+  background: var(--bg-panel);
   border: none;
   border-top: 1px solid var(--border);
   color: var(--text-dim);
@@ -1327,4 +1341,269 @@ body {
 
 .sort-select option {
   background: var(--bg-panel);
+}
+
+/* ── Palette Notes ── */
+.palette-notes-wrap {
+  margin-bottom: 8px;
+}
+
+.palette-notes {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  color: var(--text-secondary);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  resize: none;
+  padding: 2px 0;
+  line-height: 1.5;
+  transition: border-color 0.1s;
+  overflow: hidden;
+}
+
+.palette-notes:focus {
+  outline: none;
+  border-bottom-color: var(--border-light);
+  color: var(--text-primary);
+}
+
+.palette-notes::placeholder {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.palette-notes-readonly {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-style: italic;
+  padding: 2px 0;
+  font-family: "JetBrains Mono", monospace;
+  line-height: 1.5;
+}
+
+/* ── Swatch name ── */
+.swatch-name {
+  color: var(--text-primary);
+  font-size: 10px;
+}
+
+.swatch-name-input {
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--accent);
+  color: var(--text-primary);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  width: 100%;
+  text-align: center;
+  padding: 0;
+  outline: none;
+  height: 16px;
+}
+
+.eyedropper-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.eyedropper-btn:disabled:hover {
+  background: var(--bg-raised);
+}
+
+/* ── Lospec Import ── */
+.lospec-modal {
+  width: 480px;
+}
+
+.lospec-browse-link {
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.lospec-browse-link:hover {
+  color: var(--text-primary);
+}
+
+.lospec-search-row {
+  display: flex;
+  gap: 8px;
+}
+
+.lospec-search-row .text-input {
+  flex: 1;
+}
+
+.lospec-error {
+  font-size: 11px;
+  color: var(--accent);
+  line-height: 1.5;
+}
+
+.lospec-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+}
+
+.lospec-preview-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.lospec-preview-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.lospec-preview-author {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.palette-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.palette-author-inline {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* ── Ramp Generator ── */
+.ramp-modal {
+  width: 460px;
+}
+
+.ramp-preview {
+  display: flex;
+  gap: 2px;
+  height: 60px;
+}
+
+.ramp-swatch {
+  flex: 1;
+  border: 1px solid var(--border);
+}
+
+.ramp-swatch-base {
+  border: 2px solid var(--accent);
+}
+
+.ramp-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+}
+
+.ramp-control {
+  display: grid;
+  grid-template-columns: 100px 1fr 36px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.ramp-control input[type="range"] {
+  accent-color: var(--accent);
+}
+
+.ramp-control-value {
+  text-align: right;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ramp-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.ramp-checkbox input {
+  accent-color: var(--accent);
+}
+
+/* ── Ramp trigger button on swatches ── */
+.swatch-ramp-btn {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  background: rgba(0,0,0,0.4);
+  border: none;
+  color: white;
+  font-size: 11px;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  padding: 0;
+  border-radius: 2px;
+}
+
+.swatch-color:hover .swatch-ramp-btn,
+.swatch-bar-segment:hover .swatch-ramp-btn {
+  opacity: 1;
+}
+
+.swatch-ramp-btn:hover {
+  background: var(--accent);
+}
+
+/* ── Dither Test ── */
+.dither-test-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dither-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dither-row-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  width: 60px;
+  flex-shrink: 0;
+}
+
+.dither-row-label:last-child {
+  text-align: right;
+}
+
+.dither-test-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.dither-test-header .tab-description {
+  flex: 1;
 }

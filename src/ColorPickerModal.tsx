@@ -184,7 +184,6 @@ interface ColorPickerModalProps {
 }
 
 export function ColorPickerModal({ initialColor = '#ff0000', onConfirm, onClose, mode = 'add' }: ColorPickerModalProps) {
-  const [rgb] = hexToRgb(initialColor)
   const initHsv = rgbToHsv(...hexToRgb(initialColor))
 
   const [hue, setHue] = useState(initHsv[0])
