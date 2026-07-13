@@ -14,7 +14,7 @@
 - [x] Per-color names and per-palette notes
 - [x] Duplicate color detection
 - [x] Non-destructive sorting (hue / saturation / lightness / luminance)
-- [ ] **Undo / redo** — the most important remaining feature, and the hardest. Needs a real mutation history across every kind of state change, not a single previous-state snapshot.
+- [x] **Undo / redo** — whole-state snapshots (session-only, 100 deep), so every data change is undoable, including ones added later. All mutations funnel through `App.mutate()`.
 
 ## Organization
 
@@ -75,9 +75,9 @@
 ## Health
 
 - [x] Rust tests: persistence, corruption handling, palette lock, color limits
-- [x] Frontend tests (Vitest): color math, palette generation, color vision, storage helpers
+- [x] Frontend tests (Vitest): color math, palette generation, color vision, storage helpers, undo history
+- [x] Notes commit on blur rather than on every keystroke
 - [ ] `CONTRIBUTING.md` before open-sourcing
 - [ ] Delete dead code: `TitleBar.tsx`, `pick_color_from_screen` (+ its `storage.ts` wrapper)
-- [ ] Notes textarea saves on every keystroke — debounce or save on blur
 - [ ] Every mutation does save → reload (three disk reads); `save_palette` could return the new `AppData` instead
 - [ ] `usePreferences` returns a `loaded` flag that nothing uses, so the theme flashes dark on startup

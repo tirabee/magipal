@@ -8,6 +8,7 @@ A desktop color palette manager built for pixel artists, indie game developers, 
 
 ### Organize
 
+- **Undo / redo** — Every change is undoable, right back to deleting a whole palette by mistake
 - **Palettes and folders** — Create, rename, delete, and drag palettes between folders
 - **Palette lock** — Freeze a finished palette so its colors can't be changed by accident
 - **Color limits** — Optionally cap a palette at 4, 8, 16, 32 (or any) colors, enforced on save
@@ -43,7 +44,6 @@ A desktop color palette manager built for pixel artists, indie game developers, 
 
 ## Planned
 
-- **Undo / redo** — the big one
 - Tags and a tag cloud
 - WCAG contrast checker
 - Harmony suggester for an existing color
@@ -92,7 +92,7 @@ npm run tauri dev
 ### Run the tests
 
 ```bash
-npm test                     # frontend: color math, storage helpers
+npm test                     # frontend: color math, storage helpers, undo history
 cd src-tauri && cargo test   # backend: persistence, palette lock, color limits
 ```
 
