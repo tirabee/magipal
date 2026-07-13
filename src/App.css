@@ -284,6 +284,43 @@ body {
 .empty-state-text {
   font-size: 12px;
 }
+.palette-limit-badge {
+  font-size: 10px;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 1px 5px;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+.palette-limit-badge-full {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.color-limit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+.color-limit-input {
+  width: 72px;
+}
+.color-limit-presets {
+  display: flex;
+  gap: 4px;
+}
+.color-limit-presets .btn {
+  padding: 4px 8px;
+  min-width: 32px;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .destination-option-locked {
   opacity: 0.45;
   cursor: not-allowed;

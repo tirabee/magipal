@@ -16,7 +16,16 @@ export interface Palette {
   order?: number
   locked?: boolean
   notes?: string
-  author?:string
+  author?: string
+  /**
+   * Optional cap set at creation. Unlimited when absent.
+   *
+   * Rust's Option<i64> serializes to `null`, NOT to a missing field, so this is
+   * `number | null | undefined` and must be compared with `== null` (loose) --
+   * `!== undefined` is true for `null` and silently treats every uncapped
+   * palette as capped-at-zero.
+   */
+  max_colors?: number | null
 }
 
 export interface AppData {
@@ -101,14 +110,33 @@ export async function pickColorFromScreen(): Promise<string | null> {
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-export function newPalette(name: string, folder?: string): Palette {
+export function newPalette(
+  name: string,
+  folder?: string,
+  maxColors?: number,
+): Palette {
   return {
     id: crypto.randomUUID(),
     name,
     colors: [],
     folder,
     created_at: Date.now(),
+    max_colors: maxColors,
   }
+}
+
+/**
+ * The palette's color cap, or null if uncapped. The single place that decides
+ * what "uncapped" looks like on the wire -- see the note on Palette.max_colors.
+ */
+export function colorLimit(palette: Palette): number | null {
+  return palette.max_colors == null ? null : palette.max_colors
+}
+
+/** How many more colors will fit. Infinity when uncapped. */
+export function remainingCapacity(palette: Palette): number {
+  const limit = colorLimit(palette)
+  return limit === null ? Infinity : Math.max(0, limit - palette.colors.length)
 }
 
 

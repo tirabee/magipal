@@ -56,6 +56,8 @@ struct Palette {
     locked: Option<bool>,
     notes: Option<String>,
     author: Option<String>,
+    /// Optional cap set at creation. None = unlimited.
+    max_colors: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -157,9 +159,24 @@ fn check_lock(existing: &Palette, incoming: &Palette) -> Result<(), String> {
     Ok(())
 }
 
+/// Like the lock, the cap is enforced at the storage layer so no UI path can
+/// exceed it by forgetting to check.
+fn check_limit(palette: &Palette) -> Result<(), String> {
+    if let Some(max) = palette.max_colors {
+        if max > 0 && palette.colors.len() as i64 > max {
+            return Err(format!(
+                "This palette is limited to {max} colors and already has {}.",
+                palette.colors.len()
+            ));
+        }
+    }
+    Ok(())
+}
+
 #[tauri::command]
 fn save_palette(app: tauri::AppHandle, palette: Palette) -> Result<(), String> {
     let mut data = load_data(&app)?;
+    check_limit(&palette)?;
     if let Some(existing) = data.palettes.iter_mut().find(|p| p.id == palette.id) {
         check_lock(existing, &palette)?;
         *existing = palette;
@@ -536,7 +553,28 @@ mod tests {
             locked: None,
             notes: None,
             author: None,
+            max_colors: None,
         }
+    }
+
+    #[test]
+    fn unlimited_palette_accepts_any_number_of_colors() {
+        let p = with_colors(palette("Free"), &["#ff0000", "#00ff00", "#0000ff"]);
+        assert!(check_limit(&p).is_ok());
+    }
+
+    #[test]
+    fn capped_palette_rejects_going_over() {
+        let mut p = with_colors(palette("GB"), &["#ff0000", "#00ff00", "#0000ff"]);
+        p.max_colors = Some(2);
+        assert!(check_limit(&p).is_err());
+    }
+
+    #[test]
+    fn capped_palette_accepts_exactly_the_cap() {
+        let mut p = with_colors(palette("GB"), &["#ff0000", "#00ff00"]);
+        p.max_colors = Some(2);
+        assert!(check_limit(&p).is_ok());
     }
 
     #[test]

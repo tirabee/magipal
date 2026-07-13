@@ -8,6 +8,8 @@ import {
   deleteFolder,
   newPalette,
   togglePaletteLock,
+  remainingCapacity,
+  colorLimit,
 } from "./storage";
 import type { Palette, AppData } from "./storage";
 import type { Destination } from "./DestinationPicker";
@@ -21,6 +23,7 @@ import { SettingsPopover } from "./SettingsPopover";
 import { ConfirmModal } from "./ConfirmModal";
 import { useConfirm } from "./useConfirm";
 import { InputModal } from "./InputModal";
+import { NewPaletteModal } from "./NewPaletteModal";
 import { ExportMenu } from "./ExportMenu";
 import { BulkImportModal } from "./BulkImportModal";
 import { LospecImportModal } from "./LospecImportModal";
@@ -105,8 +108,8 @@ function App() {
     setData(refreshed);
   };
 
-  const handleNewPalette = async (name: string) => {
-    const palette = newPalette(name);
+  const handleNewPalette = async (name: string, maxColors?: number) => {
+    const palette = newPalette(name, undefined, maxColors);
     await savePalette(palette);
     const updated = await loadPalettes();
     setData(updated);
@@ -154,6 +157,7 @@ function App() {
 
   const handleAddColor = async (hex: string) => {
     if (!selectedPalette || selectedPalette.locked) return;
+    if (remainingCapacity(selectedPalette) < 1) return;
     const updated = {
       ...selectedPalette,
       colors: [...selectedPalette.colors, { hex }],
@@ -196,13 +200,35 @@ function App() {
     if (!target || target.locked) return;
 
     const existing = new Set(target.colors.map((c) => c.hex.toLowerCase()));
-    const incoming = (
-      opts.skipDuplicates
-        ? hexes.filter((hex) => !existing.has(hex.toLowerCase()))
-        : hexes
-    ).map((hex) => ({ hex }));
+    const wanted = opts.skipDuplicates
+      ? hexes.filter((hex) => !existing.has(hex.toLowerCase()))
+      : hexes;
 
-    await savePalette({ ...target, colors: [...target.colors, ...incoming] });
+    // A capped palette takes what fits. Rejecting the whole import over a
+    // near-miss is punitive; truncating silently is dishonest -- so ask.
+    const room = remainingCapacity(target);
+    if (room < 1) {
+      await confirm({
+        message: `"${target.name}" is full (${colorLimit(target)} colors). Remove a color to make room.`,
+        confirmLabel: "OK",
+      });
+      return;
+    }
+    let incoming = wanted;
+    if (wanted.length > room) {
+      const dropped = wanted.length - room;
+      const proceed = await confirm({
+        message: `"${target.name}" has room for ${room} more ${room === 1 ? "color" : "colors"}. Add the first ${room} and skip the other ${dropped}?`,
+        confirmLabel: `Add ${room}`,
+      });
+      if (!proceed) return;
+      incoming = wanted.slice(0, room);
+    }
+
+    await savePalette({
+      ...target,
+      colors: [...target.colors, ...incoming.map((hex) => ({ hex }))],
+    });
     setData(await loadPalettes());
   };
 
@@ -431,11 +457,7 @@ function App() {
       )}
 
       {showNewPalette && (
-        <InputModal
-          title="New Palette"
-          label="Palette name"
-          placeholder="My Palette…"
-          confirmLabel="Create"
+        <NewPaletteModal
           onConfirm={handleNewPalette}
           onCancel={() => setShowNewPalette(false)}
         />
@@ -646,6 +668,8 @@ function PaletteView({
   // Each entry carries the color's real position in palette.colors, so sorting
   // the view never misdirects an edit at the wrong slot on disk.
   const displayColors = sortColors(palette.colors, sortMode);
+  const limit = colorLimit(palette);
+  const isFull = remainingCapacity(palette) < 1;
 
   // Measure each bar segment so labels can flip to vertical when cramped.
   useEffect(() => {
@@ -710,6 +734,18 @@ function PaletteView({
                 via Lospec · by {palette.author}
               </span>
             )}
+            {limit !== null && (
+              <span
+                className={`palette-limit-badge ${isFull ? "palette-limit-badge-full" : ""}`}
+                title={
+                  isFull
+                    ? "This palette is full"
+                    : `Limited to ${limit} colors`
+                }
+              >
+                {palette.colors.length} / {limit}
+              </span>
+            )}
           </div>
         )}
 
@@ -744,7 +780,16 @@ function PaletteView({
             ⬇ Export
           </button>
           {!palette.locked && (
-            <button className="btn btn-accent" onClick={onAddColor}>
+            <button
+              className="btn btn-accent"
+              onClick={onAddColor}
+              disabled={isFull}
+              title={
+                isFull
+                  ? `Full — this palette is limited to ${limit} colors`
+                  : "Add a color"
+              }
+            >
               + Add Color
             </button>
           )}
