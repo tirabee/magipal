@@ -284,6 +284,14 @@ body {
 .empty-state-text {
   font-size: 12px;
 }
+.empty-state-detail {
+  font-size: 11px;
+  line-height: 1.6;
+  max-width: 420px;
+  text-align: center;
+  color: var(--text-dim);
+  opacity: 0.8;
+}
 
 /* ── Status Bar ── */
 .statusbar {

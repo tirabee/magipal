@@ -54,10 +54,14 @@ function App() {
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showLospecImport, setShowLospecImport] = useState(false);
   const [rampBaseColor, setRampBaseColor] = useState<string | null>(null);
-  // Load from disk on startup
+  const [loadError, setLoadError] = useState<string | null>(null);
+  // Load from disk on startup. A rejection here means the data file exists but
+  // is unreadable — surface it instead of rendering an empty app, which would
+  // invite the user to start saving over recoverable data.
   useEffect(() => {
     loadPalettes()
       .then(setData)
+      .catch((e) => setLoadError(String(e)))
       .finally(() => setLoading(false));
   }, []);
 
@@ -306,6 +310,27 @@ function App() {
     }
     setRampBaseColor(null);
   };
+
+  if (loadError) {
+    return (
+      <div className="app">
+        <div className="titlebar">
+          <span className="titlebar-name">Magipal</span>
+        </div>
+        <div className="empty-state" style={{ gridColumn: "1/-1" }}>
+          <div className="empty-state-icon">⚠️</div>
+          <div className="empty-state-text">
+            Magipal couldn&rsquo;t read your saved palettes.
+          </div>
+          <div className="empty-state-detail">{loadError}</div>
+          <div className="empty-state-detail">
+            Your palettes have not been deleted, and Magipal will not save over
+            them. Close the app and check the data folder before continuing.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

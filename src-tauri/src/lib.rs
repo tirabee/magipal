@@ -84,33 +84,71 @@ fn get_data_path(app: &tauri::AppHandle) -> std::path::PathBuf {
     data_dir.join("magipal.json")
 }
 
-fn load_data(app: &tauri::AppHandle) -> AppData {
-    let path = get_data_path(app);
-    if path.exists() {
-        let contents = fs::read_to_string(&path).unwrap_or_default();
-        serde_json::from_str(&contents).unwrap_or_default()
-    } else {
-        AppData::default()
+/// Write JSON without ever leaving a half-written file on disk.
+///
+/// `fs::write` truncates the target and then writes into it, so a crash
+/// mid-write destroys the old contents without producing valid new ones.
+/// Writing to a sibling temp file and renaming avoids that: rename is atomic
+/// on the same volume, so the target is always either entirely the old file
+/// or entirely the new one.
+fn write_json_atomic<T: Serialize>(path: &std::path::Path, value: &T) -> Result<(), String> {
+    let json = serde_json::to_string_pretty(value).map_err(|e| e.to_string())?;
+    let tmp = path.with_extension("json.tmp");
+    fs::write(&tmp, json).map_err(|e| format!("could not write {}: {e}", tmp.display()))?;
+    fs::rename(&tmp, path).map_err(|e| format!("could not replace {}: {e}", path.display()))?;
+    Ok(())
+}
+
+/// Move an unreadable data file aside so its bytes survive for hand-recovery
+/// instead of being overwritten by the next save.
+fn quarantine(path: &std::path::Path) -> Option<std::path::PathBuf> {
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let backup = path.with_file_name(format!("magipal.corrupt-{stamp}.json"));
+    fs::rename(path, &backup).ok().map(|_| backup)
+}
+
+/// A missing file is a legitimate empty state (fresh install). A file that
+/// exists but does not parse is an error, NOT an empty state — reporting it as
+/// empty would let the next save overwrite recoverable data with nothing.
+fn load_data_at(path: &std::path::Path) -> Result<AppData, String> {
+    if !path.exists() {
+        return Ok(AppData::default());
     }
+    let contents =
+        fs::read_to_string(path).map_err(|e| format!("could not read {}: {e}", path.display()))?;
+    if contents.trim().is_empty() {
+        return Ok(AppData::default());
+    }
+    serde_json::from_str(&contents).map_err(|e| {
+        let note = match quarantine(path) {
+            Some(backup) => format!("The damaged file was moved to {}.", backup.display()),
+            None => "The damaged file could not be moved aside.".to_string(),
+        };
+        format!("magipal.json is damaged and could not be read ({e}). {note}")
+    })
+}
+
+fn load_data(app: &tauri::AppHandle) -> Result<AppData, String> {
+    load_data_at(&get_data_path(app))
 }
 
 fn save_data(app: &tauri::AppHandle, data: &AppData) -> Result<(), String> {
-    let path = get_data_path(app);
-    let json = serde_json::to_string_pretty(data).map_err(|e| e.to_string())?;
-    fs::write(path, json).map_err(|e| e.to_string())?;
-    Ok(())
+    write_json_atomic(&get_data_path(app), data)
 }
 
 // ── Commands ─────────────────────────────────────────────────────
 
 #[tauri::command]
-fn load_palettes(app: tauri::AppHandle) -> AppData {
+fn load_palettes(app: tauri::AppHandle) -> Result<AppData, String> {
     load_data(&app)
 }
 
 #[tauri::command]
 fn save_palette(app: tauri::AppHandle, palette: Palette) -> Result<(), String> {
-    let mut data = load_data(&app);
+    let mut data = load_data(&app)?;
     if let Some(existing) = data.palettes.iter_mut().find(|p| p.id == palette.id) {
         *existing = palette;
     } else {
@@ -121,14 +159,14 @@ fn save_palette(app: tauri::AppHandle, palette: Palette) -> Result<(), String> {
 
 #[tauri::command]
 fn delete_palette(app: tauri::AppHandle, id: String) -> Result<(), String> {
-    let mut data = load_data(&app);
+    let mut data = load_data(&app)?;
     data.palettes.retain(|p| p.id != id);
     save_data(&app, &data)
 }
 
 #[tauri::command]
 fn save_folder(app: tauri::AppHandle, name: String) -> Result<(), String> {
-    let mut data = load_data(&app);
+    let mut data = load_data(&app)?;
     if !data.folders.contains(&name) {
         data.folders.push(name);
     }
@@ -137,7 +175,7 @@ fn save_folder(app: tauri::AppHandle, name: String) -> Result<(), String> {
 
 #[tauri::command]
 fn delete_folder(app: tauri::AppHandle, name: String) -> Result<(), String> {
-    let mut data = load_data(&app);
+    let mut data = load_data(&app)?;
     data.folders.retain(|f| *f != name);
     // Remove folder association from palettes
     for palette in data.palettes.iter_mut() {
@@ -150,7 +188,7 @@ fn delete_folder(app: tauri::AppHandle, name: String) -> Result<(), String> {
 
 #[tauri::command]
 fn reorder_palettes(app: tauri::AppHandle, ids: Vec<String>) -> Result<(), String> {
-    let mut data = load_data(&app);
+    let mut data = load_data(&app)?;
     for (i, id) in ids.iter().enumerate() {
         if let Some(p) = data.palettes.iter_mut().find(|p| p.id == *id) {
             p.order = Some(i as i64);
@@ -161,7 +199,7 @@ fn reorder_palettes(app: tauri::AppHandle, ids: Vec<String>) -> Result<(), Strin
 
 #[tauri::command]
 fn reorder_folders(app: tauri::AppHandle, names: Vec<String>) -> Result<(), String> {
-    let mut data = load_data(&app);
+    let mut data = load_data(&app)?;
     data.folders = names;
     save_data(&app, &data)
 }
@@ -172,7 +210,7 @@ fn move_palette_to_folder(
     palette_id: String,
     folder: Option<String>,
 ) -> Result<(), String> {
-    let mut data = load_data(&app);
+    let mut data = load_data(&app)?;
     if let Some(p) = data.palettes.iter_mut().find(|p| p.id == palette_id) {
         p.folder = folder;
     }
@@ -210,14 +248,12 @@ fn add_recent_color(app: tauri::AppHandle, hex: String) -> Result<(), String> {
     colors.retain(|c| c != &hex);
     colors.insert(0, hex);
     colors.truncate(32);
-    let json = serde_json::to_string(&colors).map_err(|e| e.to_string())?;
-    fs::write(path, json).map_err(|e| e.to_string())?;
-    Ok(())
+    write_json_atomic(&path, &colors)
 }
 
 #[tauri::command]
 fn export_palette_json(app: tauri::AppHandle, palette_id: String) -> Result<String, String> {
-    let data = load_data(&app);
+    let data = load_data(&app)?;
     let palette = data
         .palettes
         .iter()
@@ -280,14 +316,12 @@ fn set_preference(app: tauri::AppHandle, key: String, value: String) -> Result<(
         serde_json::json!({})
     };
     prefs[key] = serde_json::Value::String(value);
-    let json = serde_json::to_string_pretty(&prefs).map_err(|e| e.to_string())?;
-    fs::write(path, json).map_err(|e| e.to_string())?;
-    Ok(())
+    write_json_atomic(&path, &prefs)
 }
 
 #[tauri::command]
 fn rename_palette(app: tauri::AppHandle, id: String, name: String) -> Result<(), String> {
-    let mut data = load_data(&app);
+    let mut data = load_data(&app)?;
     if let Some(p) = data.palettes.iter_mut().find(|p| p.id == id) {
         p.name = name;
     }
@@ -296,7 +330,7 @@ fn rename_palette(app: tauri::AppHandle, id: String, name: String) -> Result<(),
 
 #[tauri::command]
 fn rename_folder(app: tauri::AppHandle, old_name: String, new_name: String) -> Result<(), String> {
-    let mut data = load_data(&app);
+    let mut data = load_data(&app)?;
     // Rename the folder
     if let Some(f) = data.folders.iter_mut().find(|f| **f == old_name) {
         *f = new_name.clone();
@@ -342,7 +376,7 @@ async fn pick_color_from_screen() -> Result<Option<String>, String> {
 
 #[tauri::command]
 fn toggle_palette_lock(app: tauri::AppHandle, id: String) -> Result<(), String> {
-    let mut data = load_data(&app);
+    let mut data = load_data(&app)?;
     if let Some(p) = data.palettes.iter_mut().find(|p| p.id == id) {
         p.locked = Some(!p.locked.unwrap_or(false));
     }
@@ -351,7 +385,7 @@ fn toggle_palette_lock(app: tauri::AppHandle, id: String) -> Result<(), String> 
 
 #[tauri::command]
 fn export_palette_ase(app: tauri::AppHandle, palette_id: String) -> Result<Vec<u8>, String> {
-    let data = load_data(&app);
+    let data = load_data(&app)?;
     let palette = data
         .palettes
         .iter()
@@ -460,6 +494,101 @@ async fn fetch_lospec_palette(slug: String) -> Result<LospecPaletteResponse, Str
         .json::<LospecPaletteResponse>()
         .await
         .map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_dir(tag: &str) -> std::path::PathBuf {
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("magipal-test-{tag}-{stamp}"));
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn palette(name: &str) -> Palette {
+        Palette {
+            id: name.to_string(),
+            name: name.to_string(),
+            colors: vec![Color {
+                hex: "#ff0000".into(),
+                name: None,
+            }],
+            folder: None,
+            created_at: 0,
+            order: None,
+            locked: None,
+            notes: None,
+            author: None,
+        }
+    }
+
+    #[test]
+    fn missing_file_is_an_empty_app_not_an_error() {
+        let dir = temp_dir("missing");
+        let data = load_data_at(&dir.join("magipal.json")).expect("fresh install must load");
+        assert!(data.palettes.is_empty());
+    }
+
+    #[test]
+    fn damaged_file_errors_instead_of_reporting_empty() {
+        // The disaster this fix exists to prevent: a truncated file used to
+        // parse as "no palettes", and the next save would overwrite it.
+        let dir = temp_dir("damaged");
+        let path = dir.join("magipal.json");
+        fs::write(&path, r#"{"palettes":[{"id":"a","na"#).unwrap();
+
+        let result = load_data_at(&path);
+        assert!(result.is_err(), "a truncated file must not load as empty");
+    }
+
+    #[test]
+    fn damaged_file_is_quarantined_not_destroyed() {
+        let dir = temp_dir("quarantine");
+        let path = dir.join("magipal.json");
+        let junk = r#"{"palettes":[{"id":"a","na"#;
+        fs::write(&path, junk).unwrap();
+
+        let _ = load_data_at(&path);
+
+        let salvaged: Vec<_> = fs::read_dir(&dir)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name().to_string_lossy().starts_with("magipal.corrupt-"))
+            .collect();
+        assert_eq!(salvaged.len(), 1, "damaged bytes must be preserved");
+        assert_eq!(fs::read_to_string(salvaged[0].path()).unwrap(), junk);
+    }
+
+    #[test]
+    fn atomic_write_round_trips() {
+        let dir = temp_dir("roundtrip");
+        let path = dir.join("magipal.json");
+        let data = AppData {
+            palettes: vec![palette("Dawn")],
+            folders: vec!["Games".into()],
+        };
+
+        write_json_atomic(&path, &data).unwrap();
+        let loaded = load_data_at(&path).unwrap();
+
+        assert_eq!(loaded.palettes.len(), 1);
+        assert_eq!(loaded.palettes[0].name, "Dawn");
+        assert_eq!(loaded.folders, vec!["Games".to_string()]);
+    }
+
+    #[test]
+    fn atomic_write_leaves_no_temp_file_behind() {
+        let dir = temp_dir("notmp");
+        let path = dir.join("magipal.json");
+        write_json_atomic(&path, &AppData::default()).unwrap();
+
+        assert!(!path.with_extension("json.tmp").exists());
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
