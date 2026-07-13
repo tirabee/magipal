@@ -28,6 +28,7 @@ import { ExportMenu } from "./ExportMenu";
 import { BulkImportModal } from "./BulkImportModal";
 import { LospecImportModal } from "./LospecImportModal";
 import { RampModal } from "./RampModal";
+import { RandomizerModal } from "./RandomizerModal";
 import { DitherTestPanel } from "./DitherTest";
 import "./App.css";
 
@@ -59,6 +60,7 @@ function App() {
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showLospecImport, setShowLospecImport] = useState(false);
   const [rampBaseColor, setRampBaseColor] = useState<string | null>(null);
+  const [showRandomizer, setShowRandomizer] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   // Load from disk on startup. A rejection here means the data file exists but
   // is unreadable — surface it instead of rendering an empty app, which would
@@ -352,6 +354,9 @@ function App() {
               <path d="M7 16H6V0H0v20h13v-7H7zm7 4h13V0H14v20zm6-16h1v12h-1V4zm15 4V4h1v3h5V0H28v12h7v4h-1v-3h-6v7h13V8zm7 12h6v-5h7V0H42v20zm6-16h1v7h-1V4zm8 16h13v-7h-6v3h-1v-4h7V8h-7V4h1v3h6V0H56zM83 8V0H70v20h13v-7h-6v3h-1V4h1v4z" />
             </svg>
           </button>
+          <button className="btn" onClick={() => setShowRandomizer(true)}>
+            🎲 Randomize
+          </button>
           <button
             className="eyedropper-btn"
             onClick={handleEyedropper}
@@ -512,6 +517,20 @@ function App() {
             setShowLospecImport(false);
           }}
           onClose={() => setShowLospecImport(false)}
+        />
+      )}
+
+      {showRandomizer && (
+        <RandomizerModal
+          palettes={data.palettes}
+          currentPaletteId={importTargetId}
+          onImport={async (colors, destination, newName) => {
+            await importColors(colors, destination, {
+              newName: newName ?? "Random Palette",
+            });
+            setShowRandomizer(false);
+          }}
+          onClose={() => setShowRandomizer(false)}
         />
       )}
 

@@ -8,7 +8,10 @@ import {
   hsvToRgb,
   isValidHex,
   relativeLuminance,
+  generatePalette,
+  HARMONY_SCHEMES,
 } from "./color";
+import type { HarmonyScheme } from "./color";
 
 describe("hexToRgb", () => {
   it("parses 6-digit hex", () => {
@@ -79,6 +82,69 @@ describe("isValidHex", () => {
     for (const hex of ["#ff", "#fffff", "#gggggg", "", "#"]) {
       expect(isValidHex(hex)).toBe(false);
     }
+  });
+});
+
+describe("generatePalette", () => {
+  const schemes = Object.keys(HARMONY_SCHEMES) as HarmonyScheme[];
+
+  it("returns exactly the requested number of valid colors", () => {
+    for (const scheme of schemes) {
+      for (const count of [1, 4, 8, 16]) {
+        const palette = generatePalette({ count, scheme, random: () => 0.5 });
+        expect(palette).toHaveLength(count);
+        for (const hex of palette) {
+          expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+        }
+      }
+    }
+  });
+
+  it("is deterministic given a fixed random source", () => {
+    const args = { count: 6, scheme: "triadic" as const, random: () => 0.42 };
+    expect(generatePalette(args)).toEqual(generatePalette(args));
+  });
+
+  it("varies when the random source varies", () => {
+    const a = generatePalette({ count: 6, scheme: "triadic", random: () => 0.1 });
+    const b = generatePalette({ count: 6, scheme: "triadic", random: () => 0.9 });
+    expect(a).not.toEqual(b);
+  });
+
+  it("ramps from dark to light so it is usable as a shading ramp", () => {
+    const palette = generatePalette({
+      count: 6,
+      scheme: "analogous",
+      baseHue: 200,
+      random: () => 0.5,
+    });
+    const lightnesses = palette.map((hex) => hexToHsl(hex)[2]);
+    for (let i = 1; i < lightnesses.length; i++) {
+      expect(lightnesses[i]).toBeGreaterThan(lightnesses[i - 1]);
+    }
+  });
+
+  it("keeps a monochrome palette on a single hue", () => {
+    const palette = generatePalette({
+      count: 5,
+      scheme: "monochrome",
+      baseHue: 200,
+      random: () => 0.5, // jitter is a constant 0, so hues land exactly
+    });
+    for (const hex of palette) {
+      expect(hexToHsl(hex)[0]).toBeCloseTo(200, 0);
+    }
+  });
+
+  it("puts complementary colors opposite each other on the wheel", () => {
+    const [first, second] = generatePalette({
+      count: 2,
+      scheme: "complementary",
+      baseHue: 30,
+      random: () => 0.5,
+    });
+    const apart = Math.abs(hexToHsl(first)[0] - hexToHsl(second)[0]);
+    expect(apart).toBeCloseTo(180, 0);
   });
 });
 

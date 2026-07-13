@@ -169,6 +169,53 @@ export function hslToHex(h: number, s: number, l: number): string {
   );
 }
 
+/** Hue offsets, in degrees, that define each classical color harmony. */
+export const HARMONY_SCHEMES = {
+  monochrome: [0],
+  analogous: [-30, -15, 0, 15, 30],
+  complementary: [0, 180],
+  triadic: [0, 120, 240],
+  tetradic: [0, 90, 180, 270],
+} as const;
+
+export type HarmonyScheme = keyof typeof HARMONY_SCHEMES;
+
+/**
+ * Builds a harmonically-related palette rather than random noise: hues come
+ * from one scheme around a base hue, and lightness is spread evenly so the
+ * result reads as a usable ramp from shadow to highlight.
+ *
+ * `random` is injectable so the generator can be tested deterministically --
+ * pass a fixed function and the output is fully reproducible.
+ */
+export function generatePalette({
+  count,
+  scheme,
+  baseHue,
+  random = Math.random,
+}: {
+  count: number;
+  scheme: HarmonyScheme;
+  baseHue?: number;
+  random?: () => number;
+}): string[] {
+  const base = baseHue ?? random() * 360;
+  const offsets = HARMONY_SCHEMES[scheme];
+  const colors: string[] = [];
+
+  for (let i = 0; i < count; i++) {
+    // A little jitter keeps the hues from looking mechanically exact.
+    const hue = base + offsets[i % offsets.length] + (random() * 10 - 5);
+    // Dark to light across the palette, so it's immediately usable as a ramp.
+    const t = count === 1 ? 0.5 : i / (count - 1);
+    const lightness = 22 + t * 60;
+    const saturation = 45 + random() * 35;
+    colors.push(hslToHex(hue, saturation, lightness));
+  }
+
+  return colors;
+}
+
 /**
  * WCAG relative luminance: how bright a color actually looks, 0 (black) to
  * 1 (white).
