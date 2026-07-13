@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import type { Palette } from './storage'
+import { DestinationPicker } from './DestinationPicker'
 
 interface RampModalProps {
   baseColor: string
@@ -194,47 +195,14 @@ export function RampModal({ baseColor, palettes, currentPaletteId, onImport, onC
             )}
           </div>
 
-          <div className="destination-picker">
-            <div className="destination-label">Add ramp to:</div>
-            <div className="destination-options">
-              <label className="destination-option">
-                <input
-                  type="radio"
-                  name="ramp-dest"
-                  value="new"
-                  checked={destination === 'new'}
-                  onChange={() => setDestination('new')}
-                />
-                <span>New palette</span>
-              </label>
-              {currentPaletteId && (
-                <label className="destination-option">
-                  <input
-                    type="radio"
-                    name="ramp-dest"
-                    value={currentPaletteId}
-                    checked={destination === currentPaletteId}
-                    onChange={() => setDestination(currentPaletteId)}
-                  />
-                  <span>Current palette</span>
-                </label>
-              )}
-              {palettes
-                .filter(p => p.id !== currentPaletteId)
-                .map(p => (
-                  <label key={p.id} className="destination-option">
-                    <input
-                      type="radio"
-                      name="ramp-dest"
-                      value={p.id}
-                      checked={destination === p.id}
-                      onChange={() => setDestination(p.id)}
-                    />
-                    <span>{p.name}</span>
-                  </label>
-                ))}
-            </div>
-          </div>
+          <DestinationPicker
+            name="ramp-dest"
+            label="Add ramp to:"
+            palettes={palettes}
+            currentPaletteId={currentPaletteId}
+            value={destination}
+            onChange={setDestination}
+          />
 
           {destination === 'new' && (
             <input

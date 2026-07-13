@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Palette } from './storage'
+import { DestinationPicker } from './DestinationPicker'
 
 interface EyedropperModalProps {
   color: string
@@ -45,47 +46,14 @@ export function EyedropperModal({
           </div>
 
           {/* Destination */}
-          <div className="destination-picker">
-            <div className="destination-label">Add color to:</div>
-            <div className="destination-options">
-              <label className="destination-option">
-                <input
-                  type="radio"
-                  name="dest"
-                  value="new"
-                  checked={destination === 'new'}
-                  onChange={() => setDestination('new')}
-                />
-                <span>New palette</span>
-              </label>
-              {currentPaletteId && (
-                <label className="destination-option">
-                  <input
-                    type="radio"
-                    name="dest"
-                    value={currentPaletteId}
-                    checked={destination === currentPaletteId}
-                    onChange={() => setDestination(currentPaletteId)}
-                  />
-                  <span>Current palette</span>
-                </label>
-              )}
-              {palettes
-                .filter(p => p.id !== currentPaletteId)
-                .map(p => (
-                  <label key={p.id} className="destination-option">
-                    <input
-                      type="radio"
-                      name="dest"
-                      value={p.id}
-                      checked={destination === p.id}
-                      onChange={() => setDestination(p.id)}
-                    />
-                    <span>{p.name}</span>
-                  </label>
-                ))}
-            </div>
-          </div>
+          <DestinationPicker
+            name="dest"
+            label="Add color to:"
+            palettes={palettes}
+            currentPaletteId={currentPaletteId}
+            value={destination}
+            onChange={setDestination}
+          />
 
           {destination === 'new' && (
             <input

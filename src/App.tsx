@@ -9,7 +9,8 @@ import {
   newPalette,
   togglePaletteLock,
 } from "./storage";
-import type { Palette, AppData, LospecPalette } from "./storage";
+import type { Palette, AppData } from "./storage";
+import type { Destination } from "./DestinationPicker";
 import { Sidebar } from "./Sidebar";
 import { ImportPngModal } from "./ImportPngModal";
 import { ColorPickerModal } from "./ColorPickerModal";
@@ -162,31 +163,55 @@ function App() {
     setShowColorPicker(false);
   };
 
-  const handleImportPng = async (
-    colors: string[],
-    destination: "new" | string,
-    newName?: string,
+  /**
+   * The one path colors take into a palette, whatever the source. This was five
+   * near-identical copies, which is exactly why the lock check existed in the
+   * ramp copy and was missing from the other four.
+   *
+   * The lock is also enforced in Rust's save_palette, so a bug here cannot
+   * corrupt a locked palette -- this guard just avoids a pointless round-trip.
+   */
+  const importColors = async (
+    hexes: string[],
+    destination: Destination,
+    opts: {
+      newName?: string;
+      author?: string;
+      /** Ramps generate shades that may already exist; other sources import as-is. */
+      skipDuplicates?: boolean;
+    } = {},
   ) => {
     if (destination === "new") {
-      const palette = newPalette(newName ?? "Imported Palette");
-      palette.colors = colors.map((hex) => ({ hex }));
+      const palette = newPalette(opts.newName ?? "Imported Palette");
+      palette.colors = hexes.map((hex) => ({ hex }));
+      if (opts.author) palette.author = opts.author;
       await savePalette(palette);
-      const updated = await loadPalettes();
-      setData(updated);
+      setData(await loadPalettes());
       setSelectedId(palette.id);
-    } else {
-      const target = data.palettes.find((p) => p.id === destination);
-      if (!target) return;
-      const updated = {
-        ...target,
-        colors: [...target.colors, ...colors.map((hex) => ({ hex }))],
-      };
-      await savePalette(updated);
-      const refreshed = await loadPalettes();
-      setData(refreshed);
+      return;
     }
-    setShowImportPng(false);
+
+    const target = data.palettes.find((p) => p.id === destination);
+    if (!target || target.locked) return;
+
+    const existing = new Set(target.colors.map((c) => c.hex.toLowerCase()));
+    const incoming = (
+      opts.skipDuplicates
+        ? hexes.filter((hex) => !existing.has(hex.toLowerCase()))
+        : hexes
+    ).map((hex) => ({ hex }));
+
+    await savePalette({ ...target, colors: [...target.colors, ...incoming] });
+    setData(await loadPalettes());
   };
+
+  /**
+   * Import modals default their destination to the current palette, so a locked
+   * one must not be offered as "current" -- it still appears in the list below,
+   * disabled and marked with a lock.
+   */
+  const importTargetId = selectedPalette?.locked ? null : selectedId;
+
   const handleEyedropper = async () => {
     if (EYEDROPPER_DISABLED) return;
     try {
@@ -197,118 +222,6 @@ function App() {
     } catch {
       // User cancelled
     }
-  };
-
-  const handleEyedropperImport = async (
-    color: string,
-    destination: string,
-    newName?: string,
-  ) => {
-    if (destination === "new") {
-      const palette = newPalette(newName ?? "Picked Colors");
-      palette.colors = [{ hex: color }];
-      await savePalette(palette);
-      const updated = await loadPalettes();
-      setData(updated);
-      setSelectedId(palette.id);
-    } else {
-      const target = data.palettes.find((p) => p.id === destination);
-      if (!target) return;
-      const updated = {
-        ...target,
-        colors: [...target.colors, { hex: color }],
-      };
-      await savePalette(updated);
-      const refreshed = await loadPalettes();
-      setData(refreshed);
-    }
-    setEyedropperColor(null);
-  };
-
-  const handleBulkImport = async (
-    colors: string[],
-    destination: string,
-    newName?: string,
-  ) => {
-    if (destination === "new") {
-      const palette = newPalette(newName ?? "Bulk Import");
-      palette.colors = colors.map((hex) => ({ hex }));
-      await savePalette(palette);
-      const updated = await loadPalettes();
-      setData(updated);
-      setSelectedId(palette.id);
-    } else {
-      const target = data.palettes.find((p) => p.id === destination);
-      if (!target) return;
-      const updated = {
-        ...target,
-        colors: [...target.colors, ...colors.map((hex) => ({ hex }))],
-      };
-      await savePalette(updated);
-      const refreshed = await loadPalettes();
-      setData(refreshed);
-    }
-    setShowBulkImport(false);
-  };
-
-  const handleLospecImport = async (
-    lospecPalette: LospecPalette,
-    destination: string,
-  ) => {
-    const colors = lospecPalette.colors.map((hex) => ({ hex: `#${hex}` }));
-
-    if (destination === "new") {
-      const palette = newPalette(lospecPalette.name);
-      palette.colors = colors;
-      palette.author = lospecPalette.author;
-      await savePalette(palette);
-      const updated = await loadPalettes();
-      setData(updated);
-      setSelectedId(palette.id);
-    } else {
-      const target = data.palettes.find((p) => p.id === destination);
-      if (!target) return;
-      const updated = {
-        ...target,
-        colors: [...target.colors, ...colors],
-      };
-      await savePalette(updated);
-      const refreshed = await loadPalettes();
-      setData(refreshed);
-    }
-    setShowLospecImport(false);
-  };
-
-  const handleRampImport = async (
-    colors: string[],
-    destination: string,
-    newName?: string,
-  ) => {
-    if (destination === "new") {
-      const palette = newPalette(newName ?? "Shade Ramp");
-      palette.colors = colors.map((hex) => ({ hex }));
-      await savePalette(palette);
-      const updated = await loadPalettes();
-      setData(updated);
-      setSelectedId(palette.id);
-    } else {
-      const target = data.palettes.find((p) => p.id === destination);
-      if (!target || target.locked) return;
-      const existingHexes = new Set(
-        target.colors.map((c) => c.hex.toLowerCase()),
-      );
-      const newColors = colors.filter(
-        (hex) => !existingHexes.has(hex.toLowerCase()),
-      );
-      const updated = {
-        ...target,
-        colors: [...target.colors, ...newColors.map((hex) => ({ hex }))],
-      };
-      await savePalette(updated);
-      const refreshed = await loadPalettes();
-      setData(refreshed);
-    }
-    setRampBaseColor(null);
   };
 
   if (loadError) {
@@ -467,8 +380,13 @@ function App() {
       {showImportPng && (
         <ImportPngModal
           palettes={data.palettes}
-          currentPaletteId={selectedId}
-          onImport={handleImportPng}
+          currentPaletteId={importTargetId}
+          onImport={async (colors, destination, newName) => {
+            await importColors(colors, destination, {
+              newName: newName ?? "Imported Palette",
+            });
+            setShowImportPng(false);
+          }}
           onClose={() => setShowImportPng(false)}
         />
       )}
@@ -493,8 +411,13 @@ function App() {
       {showBulkImport && (
         <BulkImportModal
           palettes={data.palettes}
-          currentPaletteId={selectedId}
-          onImport={handleBulkImport}
+          currentPaletteId={importTargetId}
+          onImport={async (colors, destination, newName) => {
+            await importColors(colors, destination, {
+              newName: newName ?? "Bulk Import",
+            });
+            setShowBulkImport(false);
+          }}
           onClose={() => setShowBulkImport(false)}
         />
       )}
@@ -542,8 +465,13 @@ function App() {
         <EyedropperModal
           color={eyedropperColor}
           palettes={data.palettes}
-          currentPaletteId={selectedId}
-          onImport={handleEyedropperImport}
+          currentPaletteId={importTargetId}
+          onImport={async (color, destination, newName) => {
+            await importColors([color], destination, {
+              newName: newName ?? "Picked Colors",
+            });
+            setEyedropperColor(null);
+          }}
           onClose={() => setEyedropperColor(null)}
         />
       )}
@@ -551,8 +479,15 @@ function App() {
       {showLospecImport && (
         <LospecImportModal
           palettes={data.palettes}
-          currentPaletteId={selectedId}
-          onImport={handleLospecImport}
+          currentPaletteId={importTargetId}
+          onImport={async (lospec, destination) => {
+            await importColors(
+              lospec.colors.map((hex) => `#${hex}`),
+              destination,
+              { newName: lospec.name, author: lospec.author },
+            );
+            setShowLospecImport(false);
+          }}
           onClose={() => setShowLospecImport(false)}
         />
       )}
@@ -561,8 +496,14 @@ function App() {
         <RampModal
           baseColor={rampBaseColor}
           palettes={data.palettes}
-          currentPaletteId={selectedId}
-          onImport={handleRampImport}
+          currentPaletteId={importTargetId}
+          onImport={async (ramp, destination, newName) => {
+            await importColors(ramp, destination, {
+              newName: newName ?? "Shade Ramp",
+              skipDuplicates: true,
+            });
+            setRampBaseColor(null);
+          }}
           onClose={() => setRampBaseColor(null)}
         />
       )}

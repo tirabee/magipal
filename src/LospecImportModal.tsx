@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { fetchLospecPalette } from './storage'
 import type { Palette, LospecPalette } from './storage'
+import { DestinationPicker } from './DestinationPicker'
 
 interface LospecImportModalProps {
   palettes: Palette[]
@@ -112,47 +113,14 @@ export function LospecImportModal({
                 <div className="tab-description">{result.colors.length} colors</div>
               </div>
 
-              <div className="destination-picker">
-                <div className="destination-label">Add to:</div>
-                <div className="destination-options">
-                  <label className="destination-option">
-                    <input
-                      type="radio"
-                      name="lospec-dest"
-                      value="new"
-                      checked={destination === 'new'}
-                      onChange={() => setDestination('new')}
-                    />
-                    <span>New palette</span>
-                  </label>
-                  {currentPaletteId && (
-                    <label className="destination-option">
-                      <input
-                        type="radio"
-                        name="lospec-dest"
-                        value={currentPaletteId}
-                        checked={destination === currentPaletteId}
-                        onChange={() => setDestination(currentPaletteId)}
-                      />
-                      <span>Current palette</span>
-                    </label>
-                  )}
-                  {palettes
-                    .filter(p => p.id !== currentPaletteId)
-                    .map(p => (
-                      <label key={p.id} className="destination-option">
-                        <input
-                          type="radio"
-                          name="lospec-dest"
-                          value={p.id}
-                          checked={destination === p.id}
-                          onChange={() => setDestination(p.id)}
-                        />
-                        <span>{p.name}</span>
-                      </label>
-                    ))}
-                </div>
-              </div>
+              <DestinationPicker
+                name="lospec-dest"
+                label="Add to:"
+                palettes={palettes}
+                currentPaletteId={currentPaletteId}
+                value={destination}
+                onChange={setDestination}
+              />
 
               <div className="picker-actions">
                 <button className="btn" onClick={onClose}>Cancel</button>

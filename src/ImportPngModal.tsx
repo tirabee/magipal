@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { open } from '@tauri-apps/plugin-dialog'
 import type { Palette } from './storage'
 import { readFile } from '@tauri-apps/plugin-fs'
+import { DestinationPicker } from './DestinationPicker'
 
 
 
@@ -60,56 +61,6 @@ function sampleGrid(
   return deduplicateColors(colors)
 }
 
-// ── Destination Picker ────────────────────────────────────────────
-
-function DestinationPicker({ palettes, currentPaletteId, value, onChange }: {
-  palettes: Palette[]
-  currentPaletteId: string | null
-  value: string
-  onChange: (v: string) => void
-}) {
-  return (
-    <div className="destination-picker">
-      <div className="destination-label">Add colors to:</div>
-      <div className="destination-options">
-        <label className="destination-option">
-          <input
-            type="radio"
-            name="destination"
-            value="new"
-            checked={value === 'new'}
-            onChange={() => onChange('new')}
-          />
-          <span>New palette</span>
-        </label>
-        {currentPaletteId && (
-          <label className="destination-option">
-            <input
-              type="radio"
-              name="destination"
-              value={currentPaletteId}
-              checked={value === currentPaletteId}
-              onChange={() => onChange(currentPaletteId)}
-            />
-            <span>Current palette</span>
-          </label>
-        )}
-        {palettes.filter(p => p.id !== currentPaletteId).map(p => (
-          <label key={p.id} className="destination-option">
-            <input
-              type="radio"
-              name="destination"
-              value={p.id}
-              checked={value === p.id}
-              onChange={() => onChange(p.id)}
-            />
-            <span>{p.name}</span>
-          </label>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 // ── Color Preview Strip ───────────────────────────────────────────
 
@@ -264,6 +215,7 @@ function GridTab({ palettes, currentPaletteId, onImport }: {
           <ColorStrip colors={colors} onRemove={handleRemoveColor} />
 
           <DestinationPicker
+            name="png-grid-dest"
             palettes={palettes}
             currentPaletteId={currentPaletteId}
             value={destination}
@@ -419,6 +371,7 @@ function SampleTab({ palettes, currentPaletteId, onImport }: {
           {colors.length > 0 && (
             <>
               <DestinationPicker
+                name="png-click-dest"
                 palettes={palettes}
                 currentPaletteId={currentPaletteId}
                 value={destination}
