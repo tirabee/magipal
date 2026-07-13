@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Color,
   loadPalettes,
@@ -428,7 +428,7 @@ function App() {
         <div className="main-content">
           {selectedPalette ? (
             <PaletteView
-              key={selectedPalette.colors.map((c) => c.name).join(",")}
+              key={selectedPalette.id}
               palette={selectedPalette}
               onUpdated={handlePaletteUpdated}
               onAddColor={() => setShowColorPicker(true)}
@@ -721,10 +721,11 @@ function PaletteView({
   const [segmentWidth, setSegmentWidth] = useState(999);
   const [editingTitle, setEditingTitle] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>("default");
-  const originalColors = useMemo(() => [...palette.colors], [palette.id]);
+  // palette.colors IS the saved order, and sortColors copies before sorting,
+  // so "default" can just render the prop directly.
   const displayColors =
     sortMode === "default"
-      ? originalColors
+      ? palette.colors
       : sortColors(palette.colors, sortMode);
 
   // Measure each bar segment so labels can flip to vertical when cramped.
