@@ -8,6 +8,21 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+    <script>
+      // preferences.json is the source of truth for the theme, but reading it
+      // goes through Tauri and is async -- so the first frames would paint with
+      // the dark :root default and light-theme users saw a flash on every
+      // launch. localStorage is synchronous, so usePreferences mirrors the theme
+      // into it purely as a paint cache, and we apply it before React mounts.
+      try {
+        var t = localStorage.getItem("theme");
+        if (t === "light" || t === "dark") {
+          document.documentElement.setAttribute("data-theme", t);
+        }
+      } catch (e) {
+        // Private mode or storage disabled: fall through to the default theme.
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+/** Relative to this file, so the test doesn't depend on the working directory. */
+const repoFile = (path: string) =>
+  fileURLToPath(new URL(`../${path}`, import.meta.url));
 
 /**
  * The app version lives in three files, and they must agree.
@@ -15,10 +20,10 @@ import { readFileSync } from "node:fs";
  */
 describe("version", () => {
   const tauriConf = JSON.parse(
-    readFileSync("src-tauri/tauri.conf.json", "utf-8"),
+    readFileSync(repoFile("src-tauri/tauri.conf.json"), "utf-8"),
   );
-  const pkg = JSON.parse(readFileSync("package.json", "utf-8"));
-  const cargo = readFileSync("src-tauri/Cargo.toml", "utf-8");
+  const pkg = JSON.parse(readFileSync(repoFile("package.json"), "utf-8"));
+  const cargo = readFileSync(repoFile("src-tauri/Cargo.toml"), "utf-8");
   const cargoVersion = cargo.match(/^version\s*=\s*"([^"]+)"/m)?.[1];
 
   it("is a valid semver in tauri.conf.json", () => {

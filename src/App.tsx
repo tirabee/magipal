@@ -69,7 +69,13 @@ function App() {
   const [eyedropperColor, setEyedropperColor] = useState<string | null>(null);
   const selectedPalette =
     data.palettes.find((p) => p.id === selectedId) ?? null;
-  const { theme, setTheme, swatchStyle, setSwatchStyle } = usePreferences();
+  const {
+    theme,
+    setTheme,
+    swatchStyle,
+    setSwatchStyle,
+    loaded: prefsLoaded,
+  } = usePreferences();
   const [showSettings, setShowSettings] = useState(false);
   const [editingColorIndex, setEditingColorIndex] = useState<number | null>(
     null,
@@ -431,7 +437,9 @@ function App() {
     );
   }
 
-  if (loading) {
+  // Wait for preferences too, not just palettes: rendering before swatchStyle
+  // arrives briefly shows squares before flipping to the saved circles or bar.
+  if (loading || !prefsLoaded) {
     return (
       <div className="app">
         <div className="titlebar">

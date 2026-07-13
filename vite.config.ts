@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
@@ -11,8 +12,13 @@ const host = process.env.TAURI_DEV_HOST;
 // Cargo.toml version instead, which is a great way to ship a 0.9.0 labelled
 // 0.1.0.) The frontend reads the same file so the status bar can never disagree
 // with the app it is running in; version.test.ts keeps the other two in step.
+// Resolved relative to this file, not to the working directory -- a bare
+// "./src-tauri/..." breaks the moment the config is loaded from anywhere else.
 const { version } = JSON.parse(
-  readFileSync("./src-tauri/tauri.conf.json", "utf-8"),
+  readFileSync(
+    fileURLToPath(new URL("./src-tauri/tauri.conf.json", import.meta.url)),
+    "utf-8",
+  ),
 );
 
 // https://vite.dev/config/
