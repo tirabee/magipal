@@ -284,6 +284,77 @@ body {
 .empty-state-text {
   font-size: 12px;
 }
+/* ── Color Vision Panel ── */
+.vision-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vision-row-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.vision-row-hint {
+  color: var(--text-dim);
+  font-size: 10px;
+}
+
+.vision-strip {
+  display: flex;
+  height: 48px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.vision-chip {
+  flex: 1;
+  min-width: 0;
+}
+
+.vision-report {
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.vision-report-ok {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.vision-report-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.vision-report-title {
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 600;
+}
+.vision-report-pair {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.vision-pair-chip {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.vision-pair-vs,
+.vision-pair-arrow {
+  color: var(--text-dim);
+}
+
 /* ── Randomizer ── */
 .randomizer-preview {
   display: flex;

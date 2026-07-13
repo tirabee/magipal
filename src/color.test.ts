@@ -10,6 +10,10 @@ import {
   relativeLuminance,
   generatePalette,
   HARMONY_SCHEMES,
+  simulateColorVision,
+  colorDistance,
+  findConfusablePairs,
+  CONFUSABLE_THRESHOLD,
 } from "./color";
 import type { HarmonyScheme } from "./color";
 
@@ -145,6 +149,94 @@ describe("generatePalette", () => {
     });
     const apart = Math.abs(hexToHsl(first)[0] - hexToHsl(second)[0]);
     expect(apart).toBeCloseTo(180, 0);
+  });
+});
+
+describe("simulateColorVision", () => {
+  it("leaves greys alone — achromatic colors look the same to everyone", () => {
+    for (const vision of ["protanopia", "deuteranopia", "tritanopia"] as const) {
+      for (const grey of ["#000000", "#808080", "#ffffff"]) {
+        const [r, g, b] = hexToRgb(simulateColorVision(grey, vision));
+        // still grey: all three channels within a rounding step of each other
+        expect(Math.abs(r - g)).toBeLessThanOrEqual(2);
+        expect(Math.abs(g - b)).toBeLessThanOrEqual(2);
+      }
+    }
+  });
+
+  it("collapses red and green together for protanopia and deuteranopia", () => {
+    const apart = colorDistance("#ff0000", "#00ff00");
+    for (const vision of ["protanopia", "deuteranopia"] as const) {
+      const seen = colorDistance(
+        simulateColorVision("#ff0000", vision),
+        simulateColorVision("#00ff00", vision),
+      );
+      expect(seen).toBeLessThan(apart / 2);
+    }
+  });
+
+  it("keeps red and green distinguishable for tritanopia", () => {
+    // Tritanopia is a blue/yellow deficiency; red vs green survives it.
+    const seen = colorDistance(
+      simulateColorVision("#ff0000", "tritanopia"),
+      simulateColorVision("#00ff00", "tritanopia"),
+    );
+    expect(seen).toBeGreaterThan(CONFUSABLE_THRESHOLD);
+  });
+
+  it("always returns a valid hex", () => {
+    for (const vision of ["protanopia", "deuteranopia", "tritanopia"] as const) {
+      for (const hex of ["#ff0000", "#00ff00", "#0000ff", "#c47a6f", "#123456"]) {
+        expect(simulateColorVision(hex, vision)).toMatch(/^#[0-9a-f]{6}$/);
+      }
+    }
+  });
+});
+
+describe("findConfusablePairs", () => {
+  // A red and a green that a deuteranope genuinely cannot separate: both land
+  // on the same olive once the red-green axis collapses. 291 apart to full
+  // color vision, 25 apart to a deuteranope.
+  const TRAP_RED = "#cc3e3e";
+  const TRAP_GREEN = "#3e9a3e";
+
+  it("flags a genuinely confusable red/green pair for deuteranopia", () => {
+    const pairs = findConfusablePairs([TRAP_RED, TRAP_GREEN], "deuteranopia");
+    expect(pairs).toHaveLength(1);
+    expect(pairs[0]).toMatchObject({ a: 0, b: 1 });
+  });
+
+  it("does not flag pure red vs pure green", () => {
+    // They collapse to the same hue but stay far apart in brightness, so a
+    // deuteranope still tells them apart. Flagging them would be a false alarm.
+    expect(findConfusablePairs(["#ff0000", "#00ff00"], "deuteranopia")).toEqual(
+      [],
+    );
+  });
+
+  it("does not flag colors that stay distinct", () => {
+    // Blue vs yellow survives deuteranopia fine.
+    expect(findConfusablePairs(["#0000ff", "#ffff00"], "deuteranopia")).toEqual(
+      [],
+    );
+  });
+
+  it("ignores pairs that are already near-identical to everyone", () => {
+    // That's a duplicate, not an accessibility problem.
+    expect(findConfusablePairs(["#ff0000", "#fe0101"], "deuteranopia")).toEqual(
+      [],
+    );
+  });
+
+  it("sorts the worst offenders first", () => {
+    const pairs = findConfusablePairs(
+      [TRAP_RED, TRAP_GREEN, "#0000ff", "#c85050", "#4f9b4f"],
+      "deuteranopia",
+    );
+    expect(pairs.length).toBeGreaterThan(1);
+    for (let i = 1; i < pairs.length; i++) {
+      expect(pairs[i].distance).toBeGreaterThanOrEqual(pairs[i - 1].distance);
+    }
   });
 });
 

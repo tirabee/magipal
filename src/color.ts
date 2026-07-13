@@ -217,20 +217,124 @@ export function generatePalette({
 }
 
 /**
+ * sRGB values are gamma-encoded: 128 is not half as much *light* as 255. Any
+ * math that models physical light -- luminance, color-vision simulation,
+ * blending -- has to undo that encoding first, work in linear light, then
+ * re-apply it. Skipping this is the single most common color-math bug.
+ */
+function srgbToLinear(c: number): number {
+  return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
+function linearToSrgb(c: number): number {
+  const v = c <= 0.00304 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+  return Math.max(0, Math.min(1, v));
+}
+
+/**
  * WCAG relative luminance: how bright a color actually looks, 0 (black) to
- * 1 (white).
- *
- * The channels must be linearized before weighting. sRGB values are gamma-
- * encoded -- 128 is not "half as bright" as 255 -- so applying the 0.2126 /
- * 0.7152 / 0.0722 coefficients to the raw values (as this app used to) gives an
- * answer that is close enough to look plausible and still wrong. A WCAG
- * contrast checker built on the un-linearized version reports incorrect ratios,
- * which is the sort of bug nobody notices until someone can't read the text.
+ * 1 (white). The 0.2126 / 0.7152 / 0.0722 coefficients are only correct once
+ * the channels are linearized -- applying them to raw sRGB (as this app used
+ * to) gives an answer plausible enough to look right and still wrong.
  */
 export function relativeLuminance(hex: string): number {
-  const [r, g, b] = hexToRgb(hex).map((v) => {
-    const c = v / 255;
-    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-  });
+  const [r, g, b] = hexToRgb(hex).map((v) => srgbToLinear(v / 255));
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+// ── Color vision deficiency ──────────────────────────────────────────────────
+
+/**
+ * Viénot, Brettel & Mollon (1999) projections, applied to *linear* RGB. Each
+ * collapses the colors onto the plane that the given dichromat can actually
+ * distinguish -- which is why red and green converge under protanopia and
+ * deuteranopia, rather than the whole image turning grey.
+ */
+const CVD_MATRICES = {
+  protanopia: [
+    [0.170556, 0.829444, 0.0],
+    [0.170556, 0.829444, 0.0],
+    [-0.004517, 0.004517, 1.0],
+  ],
+  deuteranopia: [
+    [0.33066, 0.66934, 0.0],
+    [0.33066, 0.66934, 0.0],
+    [-0.027855, 0.027855, 1.0],
+  ],
+  tritanopia: [
+    [1.0, 0.1274, -0.1274],
+    [0.0, 0.873909, 0.126091],
+    [0.0, 0.873909, 0.126091],
+  ],
+} as const;
+
+export type ColorVision = keyof typeof CVD_MATRICES;
+
+export const COLOR_VISION_LABELS: Record<ColorVision, string> = {
+  protanopia: "Protanopia (no red cones)",
+  deuteranopia: "Deuteranopia (no green cones)",
+  tritanopia: "Tritanopia (no blue cones)",
+};
+
+/** How a color appears to someone with the given color vision deficiency. */
+export function simulateColorVision(hex: string, vision: ColorVision): string {
+  const m = CVD_MATRICES[vision];
+  const [r, g, b] = hexToRgb(hex).map((v) => srgbToLinear(v / 255));
+
+  const project = (row: readonly number[]) =>
+    linearToSrgb(row[0] * r + row[1] * g + row[2] * b) * 255;
+
+  return rgbToHex(project(m[0]), project(m[1]), project(m[2]));
+}
+
+/**
+ * Perceptual-ish distance between two colors, 0 (identical) upward. Weighted to
+ * match how the eye actually trades off the channels -- a plain RGB distance
+ * badly overrates blue.
+ */
+export function colorDistance(a: string, b: string): number {
+  const [r1, g1, b1] = hexToRgb(a);
+  const [r2, g2, b2] = hexToRgb(b);
+  const rMean = (r1 + r2) / 2;
+  const dr = r1 - r2,
+    dg = g1 - g2,
+    db = b1 - b2;
+  return Math.sqrt(
+    (2 + rMean / 256) * dr * dr +
+      4 * dg * dg +
+      (2 + (255 - rMean) / 256) * db * db,
+  );
+}
+
+/** Below this, two colors are close enough to be practically the same swatch. */
+export const CONFUSABLE_THRESHOLD = 40;
+
+export interface ConfusablePair {
+  a: number;
+  b: number;
+  distance: number;
+}
+
+/**
+ * Pairs that a viewer with this deficiency would struggle to tell apart, but
+ * which look distinct to full-color vision. Pairs that are already near-
+ * identical to everyone are excluded -- that's a duplicate, not an
+ * accessibility problem, and the app flags those separately.
+ */
+export function findConfusablePairs(
+  hexes: string[],
+  vision: ColorVision,
+): ConfusablePair[] {
+  const pairs: ConfusablePair[] = [];
+  for (let i = 0; i < hexes.length; i++) {
+    for (let j = i + 1; j < hexes.length; j++) {
+      if (colorDistance(hexes[i], hexes[j]) < CONFUSABLE_THRESHOLD) continue;
+      const distance = colorDistance(
+        simulateColorVision(hexes[i], vision),
+        simulateColorVision(hexes[j], vision),
+      );
+      if (distance < CONFUSABLE_THRESHOLD) pairs.push({ a: i, b: j, distance });
+    }
+  }
+  return pairs.sort((x, y) => x.distance - y.distance);
 }

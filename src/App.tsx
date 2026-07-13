@@ -30,6 +30,7 @@ import { LospecImportModal } from "./LospecImportModal";
 import { RampModal } from "./RampModal";
 import { RandomizerModal } from "./RandomizerModal";
 import { DitherTestPanel } from "./DitherTest";
+import { ColorVisionPanel } from "./ColorVisionPanel";
 import "./App.css";
 
 // Temporarily disabled: a Chromium/WebView2 regression freezes all mouse
@@ -679,7 +680,11 @@ function PaletteView({
   onGenerateRamp: (hex: string) => void;
 }) {
   const [copiedHex, setCopiedHex] = useState<string | null>(null);
-  const [showDither, setShowDither] = useState(false);
+  // One mode rather than a boolean per panel: two booleans would allow the
+  // nonsense state where both panels are open at once.
+  const [viewMode, setViewMode] = useState<"swatches" | "dither" | "vision">(
+    "swatches",
+  );
   const barRef = useRef<HTMLDivElement>(null);
   const [segmentWidth, setSegmentWidth] = useState(999);
   const [editingTitle, setEditingTitle] = useState<string | null>(null);
@@ -782,11 +787,22 @@ function PaletteView({
             <option value="luminance">Sort: luminance</option>
           </select>
           <button
-            className={`btn ${showDither ? "btn-accent" : ""}`}
-            onClick={() => setShowDither((s) => !s)}
+            className={`btn ${viewMode === "dither" ? "btn-accent" : ""}`}
+            onClick={() =>
+              setViewMode((m) => (m === "dither" ? "swatches" : "dither"))
+            }
             title="Toggle dither test view"
           >
             🎲 Dither
+          </button>
+          <button
+            className={`btn ${viewMode === "vision" ? "btn-accent" : ""}`}
+            onClick={() =>
+              setViewMode((m) => (m === "vision" ? "swatches" : "vision"))
+            }
+            title="Check this palette for color blindness"
+          >
+            👁 Vision
           </button>
           <button
             className={`btn ${palette.locked ? "btn-accent" : ""}`}
@@ -835,8 +851,10 @@ function PaletteView({
           )
         )}
       </div>
-      {showDither ? (
+      {viewMode === "dither" ? (
         <DitherTestPanel colors={displayColors.map((e) => e.color)} />
+      ) : viewMode === "vision" ? (
+        <ColorVisionPanel colors={displayColors.map((e) => e.color)} />
       ) : (
         <div
           className={`palette-swatches ${swatchStyle === "bar" ? "palette-swatches-bar" : ""}`}
