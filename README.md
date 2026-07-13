@@ -6,24 +6,49 @@ A desktop color palette manager built for pixel artists, indie game developers, 
 
 ## Features
 
-- **Palette management** — Create, rename, and delete palettes; add and remove individual colors
-- **System-wide eyedropper** — Pick any color from anywhere on your screen
-- **Manual color picker** — Fine-tune colors without leaving the app
-- **PNG import** — Import palettes directly from swatch grid images
-- **Lospec API Integration** — Import palettes directly from Lospec slug or URL
-- **Multi-format exports** — Export palettes in various formats for use in other tools like GIMP, Adobe Photoshop, Aseprite, and more.
-- **Click-to-copy hex** — One click copies any hex value to your clipboard
-- **Options to fit your mood** — Light & Dark mode available, along with multiple swatch types: square, circle, and bar.
-- **Dither Test** — Test color dithering in multiple sizes and color combinations
+### Organize
+
+- **Palettes and folders** — Create, rename, delete, and drag palettes between folders
+- **Palette lock** — Freeze a finished palette so its colors can't be changed by accident
+- **Color limits** — Optionally cap a palette at 4, 8, 16, 32 (or any) colors, enforced on save
+- **Names and notes** — Name individual colors and keep per-palette notes; color names carry through to ASE and GPL exports
+- **Duplicate detection** — Repeated colors are flagged automatically
+
+### Create
+
+- **Manual color picker** — HSV picker with recent colors
+- **Shade & highlight ramps** — Generate ramps from any color, with optional hue shifting
+- **Palette randomizer** — Generate palettes from color harmonies (monochrome, analogous, complementary, triadic, tetradic)
+- **Non-destructive sorting** — Sort by hue, saturation, lightness, or luminance without touching what's saved
+
+### Check
+
+- **Color blindness simulator** — Preview your palette under protanopia, deuteranopia, and tritanopia, and get told exactly which pairs of colors become indistinguishable
+- **Dither test** — Preview Bayer 4×4 ordered dithering between any two colors
+
+### Import & Export
+
+- **Lospec** — Import any palette by slug or URL, with author attribution
+- **PNG import** — Sample from a swatch grid or click individual pixels
+- **Bulk hex import** — Paste a list of hex codes
+- **Multi-format export** — hex list, CSS variables, GPL (GIMP), PNG swatch sheet, ASE (Aseprite/Photoshop), indexed JSON
+
+### Comfort
+
+- **Keyboard shortcuts** — Press `?` in the app for the full list
+- **Light & dark themes**, and three swatch styles: squares, circles, and a continuous bar
+- **Click to copy** — One click copies any hex to your clipboard
 
 ---
 
-## Planned Features
+## Planned
 
-- Analogous palette generation
-- Palette folders and mood/vibe tags
-- WCAG accessibility / contrast checker
-- Harmony suggester (complementary, triadic, analogous)
+- **Undo / redo** — the big one
+- Tags and a tag cloud
+- WCAG contrast checker
+- Harmony suggester for an existing color
+- Accessibility settings (font scaling, contrast modes)
+- Mac build
 
 See [ROADMAP.md](./ROADMAP.md) for the full picture.
 
@@ -31,9 +56,8 @@ See [ROADMAP.md](./ROADMAP.md) for the full picture.
 
 ## Known Issues
 
-- Large palettes in bar mode have an issue where the hex codes will truncate (dependent on window size)
-- Circle view is distorted when colors are named - naming functionality still in debate
-- A [Chromium Update](https://issues.chromium.org/issues/531658990) broke the eyedropper function, expected fix end of July 2026.
+- **The system-wide eyedropper is temporarily disabled.** A [Chromium 150 regression](https://issues.chromium.org/issues/531658990) leaks a mouse hook after the picker closes, freezing the app. The fix is verified in Chrome Beta and expected in Chromium 151 (~late July 2026); the feature will be re-enabled once WebView2 catches up.
+- Hex labels in bar mode get cramped on very large palettes. Labels rotate to vertical when space is tight, but it isn't perfect yet.
 
 ---
 
@@ -42,6 +66,9 @@ See [ROADMAP.md](./ROADMAP.md) for the full picture.
 - [Tauri](https://tauri.app/) — cross-platform desktop shell (Rust)
 - [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) — UI
 - [Vite](https://vitejs.dev/) — build tooling
+- [Vitest](https://vitest.dev/) — frontend tests
+
+Palettes are stored as plain JSON in your OS app-data directory. Writes are atomic, and Magipal refuses to overwrite a data file it can't read — so a crash mid-save can't cost you your palettes.
 
 ---
 
@@ -53,7 +80,7 @@ See [ROADMAP.md](./ROADMAP.md) for the full picture.
 - [Rust](https://www.rust-lang.org/tools/install)
 - Tauri CLI: `npm install -g @tauri-apps/cli`
 
-### Install & Run
+### Install and run
 
 ```bash
 git clone https://github.com/tirabee/magipal.git
@@ -62,7 +89,14 @@ npm install
 npm run tauri dev
 ```
 
-### Build
+### Run the tests
+
+```bash
+npm test                     # frontend: color math, storage helpers
+cd src-tauri && cargo test   # backend: persistence, palette lock, color limits
+```
+
+### Build a release
 
 ```bash
 npm run tauri build
