@@ -11,6 +11,7 @@ import {
 } from "./storage";
 import type { Palette, AppData } from "./storage";
 import type { Destination } from "./DestinationPicker";
+import { hexToHsl, relativeLuminance } from "./color";
 import { Sidebar } from "./Sidebar";
 import { ImportPngModal } from "./ImportPngModal";
 import { ColorPickerModal } from "./ColorPickerModal";
@@ -513,42 +514,6 @@ function App() {
 
 // ── Color Sorting ─────────────────────────────────────────────────
 
-function hexToHsl(hex: string): [number, number, number] {
-  const h = hex.replace("#", "");
-  const r = parseInt(h.slice(0, 2), 16) / 255;
-  const g = parseInt(h.slice(2, 4), 16) / 255;
-  const b = parseInt(h.slice(4, 6), 16) / 255;
-  const max = Math.max(r, g, b),
-    min = Math.min(r, g, b);
-  const l = (max + min) / 2;
-  let hue = 0,
-    sat = 0;
-  if (max !== min) {
-    const d = max - min;
-    sat = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r:
-        hue = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-        break;
-      case g:
-        hue = ((b - r) / d + 2) / 6;
-        break;
-      case b:
-        hue = ((r - g) / d + 4) / 6;
-        break;
-    }
-  }
-  return [hue * 360, sat * 100, l * 100];
-}
-
-function getLuminance(hex: string): number {
-  const h = hex.replace("#", "");
-  const r = parseInt(h.slice(0, 2), 16) / 255;
-  const g = parseInt(h.slice(2, 4), 16) / 255;
-  const b = parseInt(h.slice(4, 6), 16) / 255;
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
 type SortMode = "default" | "hue" | "saturation" | "lightness" | "luminance";
 
 /// A color paired with its position in the palette's saved (on-disk) array.
@@ -571,7 +536,9 @@ function sortColors(colors: Color[], mode: SortMode): PositionedColor[] {
       case "lightness":
         return bl - al;
       case "luminance":
-        return getLuminance(b.color.hex) - getLuminance(a.color.hex);
+        return (
+          relativeLuminance(b.color.hex) - relativeLuminance(a.color.hex)
+        );
       default:
         return 0;
     }

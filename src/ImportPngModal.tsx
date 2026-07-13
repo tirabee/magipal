@@ -3,6 +3,7 @@ import { open } from '@tauri-apps/plugin-dialog'
 import type { Palette } from './storage'
 import { readFile } from '@tauri-apps/plugin-fs'
 import { DestinationPicker } from './DestinationPicker'
+import { rgbToHex } from './color'
 
 
 
@@ -30,10 +31,6 @@ interface ImportPngModalProps {
 type Tab = 'grid' | 'sample'
 
 // ── Helpers ──────────────────────────────────────────────────────
-
-function rgbToHex(r: number, g: number, b: number): string {
-  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')
-}
 
 function deduplicateColors(colors: string[]): string[] {
   return [...new Set(colors)]

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import type { Color } from './storage'
+import { hexToRgb } from './color'
 
 
 // 4x4 Bayer ordered-dither matrix — gives that classic chunky pixel-art
@@ -10,15 +11,6 @@ const BAYER_4X4 = [
   [3, 11, 1, 9],
   [15, 7, 13, 5],
 ]
-
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '')
-  return [
-    parseInt(h.slice(0, 2), 16),
-    parseInt(h.slice(2, 4), 16),
-    parseInt(h.slice(4, 6), 16),
-  ]
-}
 
 function DitherStrip({ colorA, colorB, steps = 6, cellSize = 16, zoom = 6 }: {
   colorA: string
