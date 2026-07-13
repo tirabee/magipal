@@ -610,11 +610,18 @@ function getLuminance(hex: string): number {
 
 type SortMode = "default" | "hue" | "saturation" | "lightness" | "luminance";
 
-function sortColors(colors: Color[], mode: SortMode): Color[] {
-  if (mode === "default") return colors;
-  return [...colors].sort((a, b) => {
-    const [ah, as_, al] = hexToHsl(a.hex);
-    const [bh, bs, bl] = hexToHsl(b.hex);
+/// A color paired with its position in the palette's saved (on-disk) array.
+/// Sorting reorders the view, so a color's position on screen is not its
+/// position in storage — every edit/remove/rename must address `index`, never
+/// the index of the loop that rendered it.
+type PositionedColor = { color: Color; index: number };
+
+function sortColors(colors: Color[], mode: SortMode): PositionedColor[] {
+  const positioned = colors.map((color, index) => ({ color, index }));
+  if (mode === "default") return positioned;
+  return positioned.sort((a, b) => {
+    const [ah, as_, al] = hexToHsl(a.color.hex);
+    const [bh, bs, bl] = hexToHsl(b.color.hex);
     switch (mode) {
       case "hue":
         return ah - bh;
@@ -623,11 +630,18 @@ function sortColors(colors: Color[], mode: SortMode): Color[] {
       case "lightness":
         return bl - al;
       case "luminance":
-        return getLuminance(b.hex) - getLuminance(a.hex);
+        return getLuminance(b.color.hex) - getLuminance(a.color.hex);
       default:
         return 0;
     }
   });
+}
+
+/// Counted over the palette's own colors, not the rendered list, so both the
+/// grid and bar views agree on what counts as a duplicate.
+function countHex(colors: Color[], hex: string): number {
+  const target = hex.toLowerCase();
+  return colors.filter((c) => c.hex.toLowerCase() === target).length;
 }
 // ── Palette View (main area) ──────────────────────────────────────
 
@@ -721,12 +735,9 @@ function PaletteView({
   const [segmentWidth, setSegmentWidth] = useState(999);
   const [editingTitle, setEditingTitle] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>("default");
-  // palette.colors IS the saved order, and sortColors copies before sorting,
-  // so "default" can just render the prop directly.
-  const displayColors =
-    sortMode === "default"
-      ? palette.colors
-      : sortColors(palette.colors, sortMode);
+  // Each entry carries the color's real position in palette.colors, so sorting
+  // the view never misdirects an edit at the wrong slot on disk.
+  const displayColors = sortColors(palette.colors, sortMode);
 
   // Measure each bar segment so labels can flip to vertical when cramped.
   useEffect(() => {
@@ -853,7 +864,7 @@ function PaletteView({
         )}
       </div>
       {showDither ? (
-        <DitherTestPanel colors={displayColors} />
+        <DitherTestPanel colors={displayColors.map((e) => e.color)} />
       ) : (
         <div
           className={`palette-swatches ${swatchStyle === "bar" ? "palette-swatches-bar" : ""}`}
@@ -862,21 +873,22 @@ function PaletteView({
             // Continuous bar view
             <div className="swatch-bar-wrap" ref={barRef}>
               <div className="swatch-bar">
-                {displayColors.map((color, i) => {
-                  const isDuplicate =
-                    displayColors.filter(
-                      (c, j) =>
-                        j !== i &&
-                        c.hex.toLowerCase() === color.hex.toLowerCase(),
-                    ).length > 1;
+                {displayColors.map(({ color, index }) => {
+                  const isDuplicate = countHex(palette.colors, color.hex) > 1;
                   return (
                     <div
-                      key={i}
+                      key={index}
                       className="swatch-bar-segment"
                       style={{ background: color.hex, flex: 1 }}
                       onClick={() => handleCopy(color.hex)}
-                      onDoubleClick={() => onEditColor(i)}
-                      title="Click to copy · Double-click to edit"
+                      onDoubleClick={() => {
+                        if (!palette.locked) onEditColor(index);
+                      }}
+                      title={
+                        palette.locked
+                          ? "Click to copy"
+                          : "Click to copy · Double-click to edit"
+                      }
                     >
                       {isDuplicate && (
                         <div className="swatch-duplicate-badge">⚠</div>
@@ -886,7 +898,7 @@ function PaletteView({
                           className="bar-segment-remove"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onRemoveColor(i);
+                            onRemoveColor(index);
                           }}
                           title="Remove color"
                         >
@@ -908,8 +920,15 @@ function PaletteView({
                 })}
               </div>
               <div className="swatch-bar-labels">
-                {displayColors.map((color, i) => (
-                  <div key={i} className="swatch-bar-label" style={{ flex: 1 }}>
+                {displayColors.map(({ color, index }) => (
+                  <div
+                    key={index}
+                    className="swatch-bar-label"
+                    style={{ flex: 1 }}
+                    title={
+                      color.name ? `${color.name} — ${color.hex}` : color.hex
+                    }
+                  >
                     <span
                       className={
                         segmentWidth < 40
@@ -917,7 +936,9 @@ function PaletteView({
                           : "label-horizontal"
                       }
                     >
-                      {copiedHex === color.hex ? "✓" : color.hex}
+                      {copiedHex === color.hex
+                        ? "✓"
+                        : (color.name ?? color.hex)}
                     </span>
                   </div>
                 ))}
@@ -925,14 +946,11 @@ function PaletteView({
             </div>
           ) : (
             // Squares or circles view
-            displayColors.map((color, i) => {
-              const isDuplicate =
-                displayColors.filter(
-                  (c) => c.hex.toLowerCase() === color.hex.toLowerCase(),
-                ).length > 1;
+            displayColors.map(({ color, index }) => {
+              const isDuplicate = countHex(palette.colors, color.hex) > 1;
               return (
                 <div
-                  key={i}
+                  key={index}
                   className={`swatch-card ${swatchStyle === "circles" ? "swatch-card-circle" : ""}`}
                 >
                   {" "}
@@ -941,7 +959,7 @@ function PaletteView({
                     style={{ background: color.hex }}
                     onClick={() => handleCopy(color.hex)}
                     onDoubleClick={() => {
-                      if (!palette.locked) onEditColor(i);
+                      if (!palette.locked) onEditColor(index);
                     }}
                     title={
                       palette.locked
@@ -968,10 +986,8 @@ function PaletteView({
                     copied={copiedHex === color.hex}
                     locked={palette.locked}
                     onRename={async (name) => {
-                      const updatedColors = palette.colors.map((c) =>
-                        c.hex === color.hex && c.name === color.name
-                          ? { ...c, name: name || undefined }
-                          : c,
+                      const updatedColors = palette.colors.map((c, i) =>
+                        i === index ? { ...c, name: name || undefined } : c,
                       );
                       const updated = { ...palette, colors: updatedColors };
                       await savePalette(updated);
@@ -981,7 +997,7 @@ function PaletteView({
                   {!palette.locked && (
                     <button
                       className="swatch-remove"
-                      onClick={() => onRemoveColor(i)}
+                      onClick={() => onRemoveColor(index)}
                       title="Remove color"
                     >
                       ×
