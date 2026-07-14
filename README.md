@@ -56,10 +56,30 @@ See [ROADMAP.md](./ROADMAP.md) for the full picture.
 
 ---
 
+## "Windows protected your PC" — is Magipal safe?
+
+Yes. Here's exactly what's happening.
+
+When you run the installer, Windows may show a blue **SmartScreen** warning saying the publisher is unrecognized. To continue, click **More info → Run anyway**.
+
+This is not a virus warning. Windows shows it for any application that hasn't been signed with a paid code-signing certificate, which currently costs a few hundred dollars a year. Magipal is a free, one-person project and hasn't bought one yet.
+
+You do not have to take my word for any of this:
+
+- **All the source code is right here.** Read it. Nothing is hidden.
+- **You can build it yourself** from this repository (see below) and get the same app.
+- **Magipal makes no network requests** except when you explicitly import a palette from Lospec, and when it checks GitHub for a new version. It doesn't phone home, and it has no analytics.
+- **Your palettes never leave your machine.** They're plain JSON in your app-data folder — go and look.
+
+I intend to get the app signed once the project qualifies for a free open-source certificate through the [SignPath Foundation](https://signpath.org/), which requires a track record of real use. Until then, the warning is the price of a free tool. Sorry about that — I'd rather explain it honestly than pretend it isn't there.
+
+---
+
 ## Known Issues
 
 - **The system-wide eyedropper is temporarily disabled.** A [Chromium 150 regression](https://issues.chromium.org/issues/531658990) leaks a mouse hook after the picker closes, freezing the app. The fix is verified in Chrome Beta and expected in Chromium 151 (~late July 2026); the feature will be re-enabled once WebView2 catches up.
 - Hex labels in bar mode get cramped on very large palettes. Labels rotate to vertical when space is tight, but it isn't perfect yet.
+- **Windows shows a SmartScreen warning on install** because the app isn't code-signed yet — see above.
 
 ---
 

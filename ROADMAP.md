@@ -64,11 +64,29 @@
 
 - [ ] **Re-enable the system-wide eyedropper.** Built and working, but disabled behind `EYEDROPPER_DISABLED` in `App.tsx`: a Chromium 150 regression leaks a mouse hook after `EyeDropper.open()` resolves and freezes the app. Fix verified in Chrome Beta, expected in Chromium 151 (~28 July 2026). Flip the flag once WebView2 updates — the rest of the eyedropper code is untouched.
 
-## After 1.0
+## Release plan
 
-- [ ] Mac build + `.dmg`
-- [ ] GitHub Actions CI
-- [ ] In-app updater
+**0.9.0 — Windows, unsigned.** Ships with the auto-updater, so every later fix
+reaches users automatically. Gathers real bug reports during the Chromium wait.
+
+**1.0 — when Chromium 151 lands** (~28 July 2026) and the eyedropper can be
+turned back on. Every 0.9.x user gets it via the updater.
+
+**Then, in rough order:**
+
+- [ ] GitHub Actions CI — a prerequisite for both of the next two
+- [ ] Code signing via the [SignPath Foundation](https://signpath.org/), which is
+      free for open-source projects but requires evidence of real use (downloads,
+      stars, community discussion). That evidence doesn't exist yet, so this is a
+      1.1+ goal — it gates nothing. Until then Windows shows a SmartScreen
+      warning on install, explained in the README.
+      **Unsigned SmartScreen reputation attaches to the file hash, so every new
+      release starts from zero.** With a certificate it accrues to the cert and
+      carries across releases — which is the real reason to get one eventually.
+- [ ] Mac build + `.dmg`. Needs CI (Tauri can't cross-compile from Windows) and,
+      to avoid the "unidentified developer" wall, a $99/yr Apple Developer
+      account.
+- [ ] Lospec "Open in App" (`lospec-palette://` URI handler)
 - [ ] Floating / draggable "sticky note" ramp panel
 - [ ] Per-palette inspiration images
 - [ ] Pixel preview canvas
