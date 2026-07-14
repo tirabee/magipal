@@ -596,11 +596,55 @@ function App() {
               viewMode={viewMode}
               onViewModeChange={setViewMode}
             />
+          ) : data.palettes.length === 0 ? (
+            // First run. This is the biggest area on screen and the only thing a
+            // brand-new user is looking at, so it does the work rather than
+            // telling them to go and find a button in the toolbar.
+            <div className="empty-state welcome">
+              <div className="empty-state-icon">🎨</div>
+              <div className="welcome-title">Welcome to Magipal</div>
+              <div className="welcome-subtitle">
+                Make a palette from scratch, or bring one in.
+              </div>
+              <div className="welcome-actions">
+                <button
+                  className="btn btn-accent"
+                  onClick={() => setShowNewPalette(true)}
+                >
+                  + New Palette
+                </button>
+                <button
+                  className="btn"
+                  onClick={() => setShowLospecImport(true)}
+                >
+                  Import from{" "}
+                  <svg
+                    className="lospec-logo"
+                    viewBox="0 0 83 20"
+                    role="img"
+                    aria-label="Lospec"
+                    fill="currentColor"
+                  >
+                    <path d="M7 16H6V0H0v20h13v-7H7zm7 4h13V0H14v20zm6-16h1v12h-1V4zm15 4V4h1v3h5V0H28v12h7v4h-1v-3h-6v7h13V8zm7 12h6v-5h7V0H42v20zm6-16h1v7h-1V4zm8 16h13v-7h-6v3h-1v-4h7V8h-7V4h1v3h6V0H56zM83 8V0H70v20h13v-7h-6v3h-1V4h1v4z" />
+                  </svg>
+                </button>
+                <button
+                  className="btn"
+                  onClick={() => setShowImportPng(true)}
+                >
+                  Import a PNG
+                </button>
+              </div>
+              <div className="welcome-hint">
+                Press <kbd className="shortcut-key">?</kbd> any time for keyboard
+                shortcuts.
+              </div>
+            </div>
           ) : (
             <div className="empty-state">
               <div className="empty-state-icon">🎨</div>
               <div className="empty-state-text">
-                select a palette or create a new one
+                select a palette from the sidebar
               </div>
             </div>
           )}

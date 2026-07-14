@@ -2249,3 +2249,41 @@ tbody .contrast-head {
 .palette-item-name {
   padding: 3px 0 5px;
 }
+
+/* ── First-run welcome ──
+   Only shown when the user has zero palettes. The main area is the biggest thing
+   on screen and the only thing a brand-new user is looking at, so it offers the
+   actions directly instead of pointing at a toolbar they haven't noticed yet. */
+.welcome {
+  gap: 0;
+}
+.welcome-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 4px;
+}
+.welcome-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+.welcome-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 18px;
+}
+.welcome-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 22px;
+}
+
+.empty-sidebar {
+  line-height: 1.7;
+}

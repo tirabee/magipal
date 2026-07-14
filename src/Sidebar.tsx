@@ -443,7 +443,11 @@ export function Sidebar({
         </DndContext>
 
         {palettes.length === 0 && (
-          <div className="empty-sidebar">no palettes yet</div>
+          <div className="empty-sidebar">
+            no palettes yet —
+            <br />
+            your palettes will appear here
+          </div>
         )}
       </div>
       <div className="sidebar-footer">
