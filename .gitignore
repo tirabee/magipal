@@ -12,6 +12,13 @@ dist
 dist-ssr
 *.local
 
+# Updater signing keys. The real key lives in ~/.tauri/ and is never in the repo,
+# but if one is ever copied here by accident it must not be committable: leaking
+# it lets anyone push a signed "update" to every Magipal install.
+*.key
+*.pem
+!*.key.pub
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -45,6 +45,9 @@ import { DitherTestPanel } from "./DitherTest";
 import { ColorVisionPanel } from "./ColorVisionPanel";
 import { useHotkeys } from "./useHotkeys";
 import { ShortcutsModal } from "./ShortcutsModal";
+import { check } from "@tauri-apps/plugin-updater";
+import type { Update } from "@tauri-apps/plugin-updater";
+import { UpdateModal } from "./UpdateModal";
 import "./App.css";
 
 // Temporarily disabled: a Chromium/WebView2 regression freezes all mouse
@@ -94,6 +97,18 @@ function App() {
   // Session-only, like every other app's undo stack. Note this shadows the
   // browser's global `history` object, which is what we want here.
   const [history, setHistory] = useState<History>(emptyHistory);
+  const [update, setUpdate] = useState<Update | null>(null);
+
+  // Check once on launch. A failure here is expected and must stay silent: the
+  // user may simply be offline, and Magipal works entirely without a network.
+  // Never interrupt someone's work to tell them we couldn't phone home.
+  useEffect(() => {
+    check()
+      .then((found) => {
+        if (found) setUpdate(found);
+      })
+      .catch(() => {});
+  }, []);
   // Load from disk on startup. A rejection here means the data file exists but
   // is unreadable — surface it instead of rendering an empty app, which would
   // invite the user to start saving over recoverable data.
@@ -719,6 +734,10 @@ function App() {
           }}
           onClose={() => setShowLospecImport(false)}
         />
+      )}
+
+      {update && (
+        <UpdateModal update={update} onDismiss={() => setUpdate(null)} />
       )}
 
       {showShortcuts && (

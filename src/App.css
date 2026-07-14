@@ -298,6 +298,35 @@ body {
 .empty-state-text {
   font-size: 12px;
 }
+/* ── Update ── */
+.update-version {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+.update-current {
+  color: var(--text-dim);
+}
+.update-notes {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.update-status {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.update-status-error {
+  color: var(--accent);
+}
+
 .toolbar-divider {
   width: 1px;
   align-self: stretch;
