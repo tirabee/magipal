@@ -91,12 +91,21 @@ turned back on. Every 0.9.x user gets it via the updater.
 - [ ] Per-palette inspiration images
 - [ ] Pixel preview canvas
 
+## Shipped for release
+
+- [x] Auto-updater, signed, checking GitHub Releases on launch — had to ship in
+      0.9.0, since a Tauri app can't be taught to update itself afterwards
+- [x] LICENSE (MIT), and JetBrains Mono bundled under its OFL rather than fetched
+      from Google on every launch
+- [x] Version single-sourced from `tauri.conf.json`, with a test that fails if
+      `package.json` or `Cargo.toml` drift from it
+- [x] `CONTRIBUTING.md` and `RELEASING.md`
+
 ## Health
 
 - [x] Rust tests: persistence, corruption handling, palette lock, color limits
-- [x] Frontend tests (Vitest): color math, palette generation, color vision, storage helpers, undo history
+- [x] Frontend tests (Vitest): color math, palette generation, color vision, storage helpers, undo history, theme contrast, version consistency
 - [x] Notes commit on blur rather than on every keystroke
-- [ ] `CONTRIBUTING.md` before open-sourcing
-- [ ] Delete dead code: `TitleBar.tsx`, `pick_color_from_screen` (+ its `storage.ts` wrapper)
-- [ ] Every mutation does save → reload (three disk reads); `save_palette` could return the new `AppData` instead
-- [ ] `usePreferences` returns a `loaded` flag that nothing uses, so the theme flashes dark on startup
+- [x] Dead code deleted (`TitleBar.tsx`, `pick_color_from_screen`)
+- [x] No startup theme flash — the theme is cached in localStorage and applied before React mounts
+- [ ] Every mutation does save → reload (three disk reads); `save_palette` could return the new `AppData` instead. Deferred past 0.9.0 deliberately: it touches every mutation path for a saving of microseconds on an 18 KB file, which is a poor trade right before a release.
