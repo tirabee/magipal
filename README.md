@@ -98,9 +98,15 @@ cd src-tauri && cargo test   # backend: persistence, palette lock, color limits
 
 ### Build a release
 
-```bash
-npm run tauri build
-```
+See [RELEASING.md](./RELEASING.md) — releases must be signed, or the auto-updater
+can't offer them.
+
+---
+
+## Contributing
+
+Bug reports are welcome with no ceremony. For anything larger, please open an
+issue first — see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ---
 
