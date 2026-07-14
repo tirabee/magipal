@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { relativeLuminance } from "./color";
+import { contrastRatio } from "./color";
 
 /**
  * Contrast is checked against the real stylesheet, not against a copy of the
@@ -29,13 +29,9 @@ function vars(selector: string): Record<string, string> {
   return found;
 }
 
-/** WCAG 2.1 contrast ratio, 1:1 (identical) to 21:1 (black on white). */
-function contrast(a: string, b: string): number {
-  const la = relativeLuminance(a);
-  const lb = relativeLuminance(b);
-  const [hi, lo] = la > lb ? [la, lb] : [lb, la];
-  return (hi + 0.05) / (lo + 0.05);
-}
+// Deliberately the same contrastRatio() the app's own contrast checker uses --
+// the tool and the tests can't disagree about what "passes" means.
+const contrast = contrastRatio;
 
 const dark = vars(":root");
 const light = { ...dark, ...vars('[data-theme="light"]') };

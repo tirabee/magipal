@@ -10,6 +10,7 @@ export const SHORTCUTS: { keys: string[]; description: string }[] = [
   { keys: ["Ctrl", "L"], description: "Lock / unlock the current palette" },
   { keys: ["Ctrl", "D"], description: "Toggle the dither view" },
   { keys: ["Ctrl", "B"], description: "Toggle the color blindness view" },
+  { keys: ["Ctrl", "K"], description: "Toggle the contrast checker" },
   { keys: ["↑", "↓"], description: "Select the previous / next palette" },
   { keys: ["Esc"], description: "Close the open dialog" },
   { keys: ["?"], description: "Show this list" },

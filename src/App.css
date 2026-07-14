@@ -1995,3 +1995,136 @@ body {
   font-size: 10px;
   color: var(--text-secondary);
 }
+
+/* ── Contrast Checker ── */
+.contrast-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.contrast-summary {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.contrast-grid-wrap {
+  overflow: auto;
+  border: 1px solid var(--border);
+  max-height: 60vh;
+}
+
+.contrast-grid {
+  border-collapse: collapse;
+}
+
+.contrast-corner {
+  position: sticky;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-panel);
+  padding: 4px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 9px;
+  color: var(--text-dim);
+  font-weight: 400;
+  white-space: nowrap;
+}
+.contrast-corner-fg,
+.contrast-corner-bg {
+  display: block;
+}
+
+.contrast-head {
+  background: var(--bg-panel);
+  padding: 3px;
+  position: sticky;
+  z-index: 1;
+}
+thead .contrast-head {
+  top: 0;
+}
+tbody .contrast-head {
+  left: 0;
+}
+
+.contrast-head-chip {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+}
+
+.contrast-cell {
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  padding: 6px 8px;
+  min-width: 44px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-variant-numeric: tabular-nums;
+}
+
+.contrast-cell-selected {
+  border-color: var(--text-primary);
+}
+
+.contrast-same {
+  background: var(--bg-panel);
+  color: var(--text-dim);
+  cursor: default;
+}
+
+/* A thin band on the cell edge encodes the level, so the grid is still readable
+   for someone who can't distinguish the cell colors themselves. */
+.contrast-aaa {
+  box-shadow: inset 0 -3px 0 rgba(255, 255, 255, 0.55);
+}
+.contrast-aa {
+  box-shadow: inset 0 -3px 0 rgba(255, 255, 255, 0.28);
+}
+.contrast-aa-large {
+  box-shadow: inset 0 -3px 0 rgba(255, 255, 255, 0.12);
+}
+.contrast-fail {
+  box-shadow: inset 0 -3px 0 rgba(255, 0, 0, 0.45);
+}
+
+.contrast-legend {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.contrast-key {
+  font-size: 10px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  background: var(--bg-panel);
+}
+
+.contrast-preview {
+  border: 1px solid var(--border);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.contrast-preview-big {
+  font-size: 24px;
+  font-weight: 700;
+}
+.contrast-preview-body {
+  font-size: 12px;
+  line-height: 1.6;
+  max-width: 60ch;
+}
+.contrast-preview-meta {
+  font-size: 10px;
+  opacity: 0.85;
+  margin-top: 4px;
+}

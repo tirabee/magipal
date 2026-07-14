@@ -28,8 +28,8 @@
 - [x] Palette randomizer (monochrome / analogous / complementary / triadic / tetradic)
 - [x] Dither test (Bayer 4×4, adjustable zoom)
 - [x] Color blindness simulator (protanopia / deuteranopia / tritanopia) with confusable-pair detection
+- [x] WCAG contrast checker — a grid of every color pair, each cell drawn in the colors it reports on
 - [ ] Harmony suggester for an existing color
-- [ ] WCAG contrast checker — `relativeLuminance()` in `color.ts` is already correct (gamma-linearized), so build on that
 - [ ] Palette merging with duplicate detection
 
 ## Import
@@ -54,7 +54,8 @@
 - [x] Light / dark theme
 - [x] Swatch styles: squares, circles, continuous bar
 - [x] Keyboard shortcuts, with an in-app reference (`?`)
-- [ ] Accessibility settings (font scaling, contrast modes)
+- [x] Accessibility settings — interface scaling (real webview zoom, so click targets grow too), high-contrast mode, always-show-controls, `prefers-reduced-motion`
+- [x] Default themes meet WCAG AA, enforced by `theme.test.ts` parsing `App.css`
 - [ ] Smooth transitions between palette selections
 - [ ] Drag to reorder colors within a palette
 - [ ] Quick Grab button — pick a color without a palette selected

@@ -14,6 +14,8 @@ import {
   colorDistance,
   findConfusablePairs,
   CONFUSABLE_THRESHOLD,
+  contrastRatio,
+  wcagLevel,
 } from "./color";
 import type { HarmonyScheme } from "./color";
 
@@ -237,6 +239,41 @@ describe("findConfusablePairs", () => {
     for (let i = 1; i < pairs.length; i++) {
       expect(pairs[i].distance).toBeGreaterThanOrEqual(pairs[i - 1].distance);
     }
+  });
+});
+
+describe("contrastRatio", () => {
+  it("anchors black-on-white at the maximum 21:1", () => {
+    expect(contrastRatio("#000000", "#ffffff")).toBeCloseTo(21, 1);
+  });
+
+  it("gives 1:1 for a color against itself", () => {
+    expect(contrastRatio("#c47a6f", "#c47a6f")).toBeCloseTo(1, 5);
+  });
+
+  it("is symmetric — argument order doesn't matter", () => {
+    expect(contrastRatio("#1a1a2e", "#e8e8f0")).toBeCloseTo(
+      contrastRatio("#e8e8f0", "#1a1a2e"),
+      5,
+    );
+  });
+
+  it("matches a known published value", () => {
+    // #767676 on white is the canonical "exactly passes AA" grey.
+    expect(contrastRatio("#767676", "#ffffff")).toBeCloseTo(4.54, 1);
+  });
+});
+
+describe("wcagLevel", () => {
+  it("maps ratios to the right band", () => {
+    expect(wcagLevel(21)).toBe("AAA");
+    expect(wcagLevel(7)).toBe("AAA");
+    expect(wcagLevel(6.99)).toBe("AA");
+    expect(wcagLevel(4.5)).toBe("AA");
+    expect(wcagLevel(4.49)).toBe("AA Large");
+    expect(wcagLevel(3)).toBe("AA Large");
+    expect(wcagLevel(2.99)).toBe("Fail");
+    expect(wcagLevel(1)).toBe("Fail");
   });
 });
 

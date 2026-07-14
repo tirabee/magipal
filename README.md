@@ -25,6 +25,7 @@ A desktop color palette manager built for pixel artists, indie game developers, 
 ### Check
 
 - **Color blindness simulator** — Preview your palette under protanopia, deuteranopia, and tritanopia, and get told exactly which pairs of colors become indistinguishable
+- **WCAG contrast checker** — Every pair of colors in a grid, with its contrast ratio and pass level. Each cell is drawn in the very colors it's reporting on, so you can see the answer as well as read it
 - **Dither test** — Preview Bayer 4×4 ordered dithering between any two colors
 
 ### Import & Export
@@ -34,10 +35,13 @@ A desktop color palette manager built for pixel artists, indie game developers, 
 - **Bulk hex import** — Paste a list of hex codes
 - **Multi-format export** — hex list, CSS variables, GPL (GIMP), PNG swatch sheet, ASE (Aseprite/Photoshop), indexed JSON
 
-### Comfort
+### Comfort & Accessibility
 
 - **Keyboard shortcuts** — Press `?` in the app for the full list
 - **Light & dark themes**, and three swatch styles: squares, circles, and a continuous bar
+- **Interface scaling** — 100% to 175%. Scales the whole UI, including click targets, not just the text
+- **High contrast mode**, and default themes that meet WCAG AA
+- **Always-show controls** — for anyone who can't hover precisely
 - **Click to copy** — One click copies any hex to your clipboard
 
 ---
@@ -45,9 +49,7 @@ A desktop color palette manager built for pixel artists, indie game developers, 
 ## Planned
 
 - Tags and a tag cloud
-- WCAG contrast checker
 - Harmony suggester for an existing color
-- Accessibility settings (font scaling, contrast modes)
 - Mac build
 
 See [ROADMAP.md](./ROADMAP.md) for the full picture.

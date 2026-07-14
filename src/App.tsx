@@ -43,6 +43,7 @@ import { RampModal } from "./RampModal";
 import { RandomizerModal } from "./RandomizerModal";
 import { DitherTestPanel } from "./DitherTest";
 import { ColorVisionPanel } from "./ColorVisionPanel";
+import { ContrastPanel } from "./ContrastPanel";
 import { useHotkeys } from "./useHotkeys";
 import { ShortcutsModal } from "./ShortcutsModal";
 import { check } from "@tauri-apps/plugin-updater";
@@ -60,7 +61,7 @@ const EYEDROPPER_DISABLED = true;
  * One mode rather than a boolean per panel: separate booleans would allow the
  * nonsense state where the dither and vision panels are both open at once.
  */
-type ViewMode = "swatches" | "dither" | "vision";
+type ViewMode = "swatches" | "dither" | "vision" | "contrast";
 // ── App ──────────────────────────────────────────────────────────
 
 function App() {
@@ -417,6 +418,8 @@ function App() {
             setViewMode((m) => (m === "dither" ? "swatches" : "dither")),
           "mod+b": () =>
             setViewMode((m) => (m === "vision" ? "swatches" : "vision")),
+          "mod+k": () =>
+            setViewMode((m) => (m === "contrast" ? "swatches" : "contrast")),
           arrowup: () => selectAdjacent(-1),
           arrowdown: () => selectAdjacent(1),
           // '?' is Shift+/ on most layouts, but unshifted on some.
@@ -1059,6 +1062,15 @@ function PaletteView({
             👁 Vision
           </button>
           <button
+            className={`btn ${viewMode === "contrast" ? "btn-accent" : ""}`}
+            onClick={() =>
+              onViewModeChange(viewMode === "contrast" ? "swatches" : "contrast")
+            }
+            title="Check WCAG contrast between every pair of colors (Ctrl+K)"
+          >
+            ◐ Contrast
+          </button>
+          <button
             className={`btn ${palette.locked ? "btn-accent" : ""}`}
             onClick={onToggleLock}
             title={palette.locked ? "Unlock palette" : "Lock palette"}
@@ -1106,6 +1118,8 @@ function PaletteView({
         <DitherTestPanel colors={displayColors.map((e) => e.color)} />
       ) : viewMode === "vision" ? (
         <ColorVisionPanel colors={displayColors.map((e) => e.color)} />
+      ) : viewMode === "contrast" ? (
+        <ContrastPanel colors={displayColors.map((e) => e.color)} />
       ) : (
         <div
           className={`palette-swatches ${swatchStyle === "bar" ? "palette-swatches-bar" : ""}`}

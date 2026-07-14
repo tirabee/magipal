@@ -242,6 +242,43 @@ export function relativeLuminance(hex: string): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
+/**
+ * WCAG 2.1 contrast ratio between two colors: 1 (identical) to 21 (black on
+ * white). Symmetric -- the order of the arguments doesn't matter.
+ */
+export function contrastRatio(a: string, b: string): number {
+  const la = relativeLuminance(a);
+  const lb = relativeLuminance(b);
+  const [lighter, darker] = la > lb ? [la, lb] : [lb, la];
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/**
+ * WCAG 2.1 thresholds. "Large" means 24px+, or 18.66px+ bold -- big type is
+ * legible at lower contrast, which is why the bar is lower for it.
+ *
+ * `ui` (3:1) is the bar for things that aren't text at all: icons, borders,
+ * focus rings, the edge of a button. It's easy to forget those have a
+ * requirement too.
+ */
+export const WCAG = {
+  aaLarge: 3,
+  aa: 4.5,
+  aaaLarge: 4.5,
+  aaa: 7,
+  ui: 3,
+} as const;
+
+export type WcagLevel = "AAA" | "AA" | "AA Large" | "Fail";
+
+/** The best level this ratio achieves for normal-size body text. */
+export function wcagLevel(ratio: number): WcagLevel {
+  if (ratio >= WCAG.aaa) return "AAA";
+  if (ratio >= WCAG.aa) return "AA";
+  if (ratio >= WCAG.aaLarge) return "AA Large";
+  return "Fail";
+}
+
 // ── Color vision deficiency ──────────────────────────────────────────────────
 
 /**
