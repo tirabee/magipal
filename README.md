@@ -147,3 +147,5 @@ Magipal runs entirely on your machine. It makes no network requests except when 
 Magipal is MIT licensed — see [LICENSE](./LICENSE).
 
 It bundles [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono), licensed under the SIL Open Font License 1.1 — see [licenses/OFL-JetBrainsMono.txt](./licenses/OFL-JetBrainsMono.txt).
+
+The app icon is the palette glyph from [Noto Emoji](https://github.com/googlefonts/noto-emoji), licensed under Apache 2.0 — see [licenses/Apache-2.0-NotoEmoji.txt](./licenses/Apache-2.0-NotoEmoji.txt).

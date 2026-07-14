@@ -2183,22 +2183,50 @@ tbody .contrast-head {
 .palette-item.active .palette-item-name {
   text-decoration: underline wavy var(--accent);
   text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
+  text-underline-offset: 2px;
 }
 
-/* The sidebar heading now lines up with the toolbar across the gap, and earns
-   the height by carrying the app's name colour. */
+/* ── Control and bar sizing ──
+   Every toolbar control is one height, and the bars are DERIVED from it, so the
+   sidebar heading and the toolbar can't drift a pixel apart the way they had.
+   (.btn had no height at all and computed to ~24px, .settings-btn was 24px, and
+   .sort-select and .eyedropper-btn were 28px.) */
 :root {
-  --bar-height: 36px;
+  --control-height: 28px;
+  /* control + 6px padding top and bottom + 1px bottom border */
+  --bar-height: calc(var(--control-height) + 13px);
 }
-.main-toolbar {
-  min-height: var(--bar-height);
+
+.btn,
+.sort-select,
+.eyedropper-btn,
+.settings-btn {
+  height: var(--control-height);
 }
+
+.main-toolbar,
 .sidebar-header {
-  min-height: var(--bar-height);
+  height: var(--bar-height);
+  flex-shrink: 0;
+}
+
+.sidebar-header {
   display: flex;
   align-items: center;
   color: var(--accent-text);
   font-size: 12px;
   letter-spacing: 0.12em;
+}
+
+/* Sits just under the toolbar it's opened from. */
+.popover {
+  top: calc(var(--bar-height) + 2px);
+}
+
+/* The wavy underline is drawn below the baseline, and .palette-item-name has
+   overflow: hidden for its ellipsis -- so without room in the padding box, the
+   squiggle gets sliced off. overflow clips at the padding edge, so padding is
+   exactly the lever here. */
+.palette-item-name {
+  padding: 3px 0 5px;
 }
