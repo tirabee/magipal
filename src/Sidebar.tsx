@@ -153,8 +153,15 @@ function DroppableFolder({ name, palettes, selectedId, onSelect, onDelete, onDel
     data: { type: 'folder', name },
   })
 
+  // Tint the whole folder when the selected palette lives inside it, so you can
+  // see at a glance which folder you're working in.
+  const holdsSelection = palettes.some(p => p.id === selectedId)
+
   return (
-    <div style={{ opacity: isDragging ? 0.3 : 1 }}>
+    <div
+      className={holdsSelection ? 'folder-group-active' : undefined}
+      style={{ opacity: isDragging ? 0.3 : 1 }}
+    >
       <div
         ref={node => { setNodeRef(node); setDragRef(node) }}
         className={`folder-item ${isOver ? 'folder-drop-target' : ''}`}

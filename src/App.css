@@ -358,11 +358,16 @@ body {
   color: var(--text-secondary);
 }
 
+/* This sits on the red --accent-dim status bar, NOT on a panel. It used to use
+   --text-dim, which is tuned for the panel backgrounds and measured 1.94:1 here
+   on dark and 1.57:1 on light -- against a 4.5:1 requirement, effectively
+   invisible. The other status items use white for exactly this reason. */
 .statusbar-shortcuts {
   margin-left: auto;
   background: none;
   border: none;
-  color: var(--text-dim);
+  color: #fff;
+  opacity: var(--fade-soft);
   font-family: inherit;
   font-size: inherit;
   cursor: pointer;
@@ -372,7 +377,12 @@ body {
   padding: 0 4px;
 }
 .statusbar-shortcuts:hover {
-  color: var(--text-primary);
+  opacity: 1;
+}
+.statusbar-shortcuts .shortcut-key {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #fff;
 }
 
 /* ── Color Vision Panel ── */
@@ -1557,10 +1567,12 @@ body {
 }
 
 /* ── Palette lock ── */
+/* Was opacity 0.6 inside a .palette-locked row that is itself opacity 0.8 --
+   they multiply, so the icon rendered at 0.48. The row stays dimmed (that's the
+   point of "locked"), but the icon that explains why does not. */
 .palette-lock-icon {
-  font-size: 10px;
+  font-size: 11px;
   margin-left: auto;
-  opacity: 0.6;
   flex-shrink: 0;
 }
 
@@ -2085,4 +2097,55 @@ tbody .contrast-head {
   font-size: 10px;
   opacity: 0.85;
   margin-top: 4px;
+}
+
+/* ── Cosmetic pass ───────────────────────────────────────────────────────── */
+
+/* Emoji glyphs come from the system font and carry their own colors, so they
+   can't be recolored to suit the theme -- the grey gear and the lock nearly
+   vanish on the light background. A drop shadow gives them an edge to sit
+   against without touching the glyph itself. */
+.settings-btn,
+.palette-lock-icon {
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
+}
+[data-theme='light'] .settings-btn,
+[data-theme='light'] .palette-lock-icon {
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.55));
+}
+.settings-btn:hover {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+
+/* Sidebar: the folder holding the selected palette is tinted as a whole, so you
+   can see at a glance which folder you're working in. The selected palette
+   itself is then marked by a wavy underline rather than by another background,
+   which would be indistinguishable from its own folder's tint. */
+.folder-group-active {
+  background: var(--bg-raised);
+}
+.folder-group-active .palette-item:hover {
+  background: var(--border);
+}
+.palette-item.active .palette-item-name {
+  text-decoration: underline wavy var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* The sidebar heading now lines up with the toolbar across the gap, and earns
+   the height by carrying the app's name colour. */
+:root {
+  --bar-height: 36px;
+}
+.main-toolbar {
+  min-height: var(--bar-height);
+}
+.sidebar-header {
+  min-height: var(--bar-height);
+  display: flex;
+  align-items: center;
+  color: var(--accent-text);
+  font-size: 12px;
+  letter-spacing: 0.12em;
 }

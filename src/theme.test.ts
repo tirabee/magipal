@@ -74,8 +74,11 @@ describe("high contrast meets WCAG AAA (7:1)", () => {
   check("light + high contrast", lightHC, 7);
 });
 
-describe("white-on-accent surfaces", () => {
-  // --accent-dim is a button and status-bar fill with white text on it.
+describe("the --accent-dim surface (status bar, accent buttons)", () => {
+  // This surface was originally missed: the status bar's "? shortcuts" link used
+  // --text-dim, which is tuned for the panel backgrounds and measured 1.94:1
+  // here on dark and 1.57:1 on light -- effectively invisible. Everything drawn
+  // on the red bar must be checked against the red, not against a panel.
   for (const [name, theme] of [
     ["dark", dark],
     ["light", light],
@@ -85,7 +88,24 @@ describe("white-on-accent surfaces", () => {
         4.5,
       );
     });
+
+    it(`${name}: no panel text colour is used on the status bar`, () => {
+      // If someone reaches for --text-dim / --text-secondary on the red bar
+      // again, this is the failure that should stop them.
+      for (const fg of ["--text-dim", "--text-secondary"]) {
+        expect(
+          contrast(theme[fg], theme["--accent-dim"]),
+          `${fg} would be unreadable on the status bar`,
+        ).toBeLessThan(4.5);
+      }
+    });
   }
+
+  it("the status bar link is white, not a panel text colour", () => {
+    const rule = css.match(/\.statusbar-shortcuts\s*\{([^}]*)\}/g)?.join("");
+    expect(rule).toBeTruthy();
+    expect(rule).not.toMatch(/color:\s*var\(--text-/);
+  });
 });
 
 describe("the stylesheet doesn't suppress focus rings", () => {
