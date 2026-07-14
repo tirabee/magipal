@@ -33,7 +33,9 @@ A desktop color palette manager built for pixel artists, indie game developers, 
 - **Lospec** — Import any palette by slug or URL, with author attribution
 - **PNG import** — Sample from a swatch grid or click individual pixels
 - **Bulk hex import** — Paste a list of hex codes
-- **Multi-format export** — hex list, CSS variables, GPL (GIMP), PNG swatch sheet, ASE (Aseprite/Photoshop), indexed JSON
+- **Multi-format export** — hex list, CSS variables, GPL (GIMP, Krita, Inkscape, **Aseprite**), ASE / Adobe Swatch Exchange (Photoshop, Illustrator, Affinity), PNG swatch sheet, indexed JSON
+
+> **Heads up:** for Aseprite, export **GPL**, not ASE. Aseprite uses `.ase` for its *own* sprite files, which is a different format that merely shares the extension with Adobe Swatch Exchange — hand Aseprite an `.ase` palette and it won't open it.
 
 ### Comfort & Accessibility
 

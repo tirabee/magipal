@@ -44,9 +44,9 @@
 
 - [x] Hex list
 - [x] CSS variables
-- [x] GPL (GIMP)
+- [x] GPL (GIMP, Krita, Inkscape, **Aseprite**) — carries color names; this is the one Aseprite users want
 - [x] PNG swatch sheet
-- [x] ASE (Aseprite / Photoshop) — carries color names
+- [x] ASE / Adobe Swatch Exchange (Photoshop, Illustrator, Affinity) — carries color names. NOT for Aseprite: Aseprite's `.ase` is its own sprite format and merely shares the extension. Aseprite palettes go via GPL.
 - [x] Indexed RGB JSON
 
 ## Comfort & Accessibility
