@@ -130,8 +130,16 @@ function DraggablePaletteItem({ palette, selected, onSelect, onDelete, indented,
 
 // ── Droppable Folder ──────────────────────────────────────────────
 
-function DroppableFolder({ name, palettes, selectedId, onSelect, onDelete, onDeletePalette, onRename, onToggleLock }: {
+/**
+ * How many tints the folders cycle through. Each folder gets its own faint hue
+ * so that "these palettes are grouped" reads at a glance, rather than resting on
+ * indentation alone. Assigned by position, so neighbours are always different.
+ */
+export const FOLDER_TINTS = 5
+
+function DroppableFolder({ name, tint, palettes, selectedId, onSelect, onDelete, onDeletePalette, onRename, onToggleLock }: {
   name: string
+  tint: number
   palettes: Palette[]
   selectedId: string | null
   onSelect: (id: string) => void
@@ -153,13 +161,15 @@ function DroppableFolder({ name, palettes, selectedId, onSelect, onDelete, onDel
     data: { type: 'folder', name },
   })
 
-  // Tint the whole folder when the selected palette lives inside it, so you can
-  // see at a glance which folder you're working in.
+  // The folder holding the selection gets a stronger wash of its own tint, so
+  // "which folder is this" and "which folder am I in" are two separate signals
+  // rather than one doing double duty.
   const holdsSelection = palettes.some(p => p.id === selectedId)
 
   return (
     <div
-      className={holdsSelection ? 'folder-group-active' : undefined}
+      className={`folder-group ${holdsSelection ? 'folder-group-active' : ''}`}
+      data-tint={tint}
       style={{ opacity: isDragging ? 0.3 : 1 }}
     >
       <div
@@ -396,10 +406,11 @@ export function Sidebar({
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          {folders.map(folder => (
+          {folders.map((folder, index) => (
             <DroppableFolder
               key={folder}
               name={folder}
+              tint={index % FOLDER_TINTS}
               palettes={folderPalettes(folder)}
               selectedId={selectedId}
               onSelect={onSelect}

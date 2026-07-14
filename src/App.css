@@ -180,6 +180,10 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* Room below the baseline for the selected item's wavy underline. Without it
+     the line box ends at the text and `overflow: hidden` -- which is here for
+     the ellipsis -- clips the underline off entirely. */
+  line-height: 1.6;
 }
 
 .sidebar-footer {
@@ -2117,16 +2121,65 @@ tbody .contrast-head {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
 }
 
-/* Sidebar: the folder holding the selected palette is tinted as a whole, so you
-   can see at a glance which folder you're working in. The selected palette
-   itself is then marked by a wavy underline rather than by another background,
-   which would be indistinguishable from its own folder's tint. */
+/* ── Sidebar folder tints ──
+   Each folder gets its own faint hue, so "these palettes are grouped" reads at a
+   glance instead of resting on indentation alone, and unfoldered palettes are
+   obviously not in a folder because they have no wash at all.
+
+   The tints are translucent overlays rather than fixed colours, so they
+   composite over whatever --bg-panel is and work in both themes from one
+   definition. Only the alpha is tuned per theme -- light backgrounds swallow a
+   wash that reads fine on dark. */
+:root {
+  --folder-wash: 0.07;
+  --folder-wash-active: 0.18;
+  --hover-wash: rgba(255, 255, 255, 0.07);
+}
+[data-theme="light"] {
+  --folder-wash: 0.1;
+  --folder-wash-active: 0.22;
+  --hover-wash: rgba(0, 0, 0, 0.06);
+}
+
+.folder-group[data-tint="0"] {
+  --folder-hue: 233, 69, 96;
+}
+.folder-group[data-tint="1"] {
+  --folder-hue: 69, 150, 233;
+}
+.folder-group[data-tint="2"] {
+  --folder-hue: 80, 200, 120;
+}
+.folder-group[data-tint="3"] {
+  --folder-hue: 233, 180, 69;
+}
+.folder-group[data-tint="4"] {
+  --folder-hue: 160, 100, 233;
+}
+
+.folder-group {
+  background: rgba(var(--folder-hue), var(--folder-wash));
+}
+
+/* The folder you're working in gets a stronger wash of its OWN hue plus an
+   accent edge, so "which folder is this" and "which folder am I in" stay two
+   separate signals rather than one doing double duty. */
 .folder-group-active {
-  background: var(--bg-raised);
+  background: rgba(var(--folder-hue), var(--folder-wash-active));
+  box-shadow: inset 2px 0 0 var(--accent);
 }
-.folder-group-active .palette-item:hover {
-  background: var(--border);
+
+.folder-group .palette-item:hover {
+  background: var(--hover-wash);
 }
+
+/* Inside a folder the selected item does NOT take its own background: it would
+   be a slab of colour sitting on the folder's own tint. The wavy underline and
+   the left edge carry the selection instead. */
+.folder-group .palette-item.active {
+  background: transparent;
+}
+
 .palette-item.active .palette-item-name {
   text-decoration: underline wavy var(--accent);
   text-decoration-thickness: 1px;
