@@ -443,9 +443,6 @@ function App() {
   if (loadError) {
     return (
       <div className="app">
-        <div className="titlebar">
-          <span className="titlebar-name">Magipal</span>
-        </div>
         <div className="empty-state" style={{ gridColumn: "1/-1" }}>
           <div className="empty-state-icon">⚠️</div>
           <div className="empty-state-text">
@@ -466,9 +463,6 @@ function App() {
   if (loading || !prefsLoaded) {
     return (
       <div className="app">
-        <div className="titlebar">
-          <span className="titlebar-name">Magipal</span>
-        </div>
         <div className="empty-state" style={{ gridColumn: "1/-1" }}>
           <div className="empty-state-text">loading...</div>
         </div>
@@ -478,45 +472,6 @@ function App() {
 
   return (
     <div className="app">
-      {/* Title Bar */}
-      <div className="titlebar" style={{ position: "relative" }}>
-        <span className="titlebar-name">Magipal</span>
-        <span className="titlebar-sep">—</span>
-        <span className="titlebar-file">
-          {selectedPalette ? selectedPalette.name : "no palette selected"}
-        </span>
-        <button
-          className="settings-btn"
-          onClick={() => setShowSettings((s) => !s)}
-          title="Settings"
-        >
-          ⚙️
-        </button>
-        {showSettings && (
-          <SettingsPopover
-            theme={theme}
-            swatchStyle={swatchStyle}
-            uiScale={uiScale}
-            highContrast={highContrast}
-            alwaysShowControls={alwaysShowControls}
-            onThemeChange={(t) => {
-              setTheme(t);
-              setShowSettings(false);
-            }}
-            onSwatchStyleChange={(s) => {
-              setSwatchStyle(s);
-              setShowSettings(false);
-            }}
-            // The accessibility controls deliberately leave the popover open:
-            // you need to see the effect to know whether it's the one you want.
-            onUiScaleChange={setUiScale}
-            onHighContrastChange={setHighContrast}
-            onAlwaysShowControlsChange={setAlwaysShowControls}
-            onClose={() => setShowSettings(false)}
-          />
-        )}
-      </div>
-
       {/* Sidebar */}
       <Sidebar
         palettes={data.palettes}
@@ -591,6 +546,37 @@ function App() {
           >
             🔍
           </button>
+
+          <button
+            className="settings-btn"
+            onClick={() => setShowSettings((s) => !s)}
+            title="Settings"
+          >
+            ⚙️
+          </button>
+          {showSettings && (
+            <SettingsPopover
+              theme={theme}
+              swatchStyle={swatchStyle}
+              uiScale={uiScale}
+              highContrast={highContrast}
+              alwaysShowControls={alwaysShowControls}
+              onThemeChange={(t) => {
+                setTheme(t);
+                setShowSettings(false);
+              }}
+              onSwatchStyleChange={(s) => {
+                setSwatchStyle(s);
+                setShowSettings(false);
+              }}
+              // The accessibility controls deliberately leave the popover open:
+              // you need to see the effect to know whether it's the one you want.
+              onUiScaleChange={setUiScale}
+              onHighContrastChange={setHighContrast}
+              onAlwaysShowControlsChange={setAlwaysShowControls}
+              onClose={() => setShowSettings(false)}
+            />
+          )}
         </div>
         <div className="main-content">
           {selectedPalette ? (

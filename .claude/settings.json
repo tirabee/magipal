@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep -B8 \"^  opacity: 0;$\" src/App.css)"
+      "Bash(grep -B8 \"^  opacity: 0;$\" src/App.css)",
+      "Bash(perl -0777 -ne 'while \\(/\\([^\\\\n{}]+\\)\\\\{\\\\s*\\\\}/g\\) { print \"$1\\\\n\" }' src/App.css)",
+      "Bash(perl -0777 -i -pe 's/\\\\n[^\\\\n{}]+\\\\{\\\\s*\\\\}\\\\n/\\\\n/g' src/App.css)",
+      "Bash(perl -0777 -ne 'my $c = \\(\\) = /[^\\\\n{}]+\\\\{\\\\s*\\\\}/g; print $c' src/App.css)"
     ]
   }
 }

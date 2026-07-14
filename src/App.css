@@ -94,65 +94,20 @@ body {
   user-select: none;
 }
 
-/* ── Layout ── */
+/* ── Layout ──
+   There used to be a 32px title bar row here. It showed the app name (already in
+   the OS title bar directly above, and again in the status bar) and the selected
+   palette's name (already the big heading right below it) -- so it cost 32px to
+   repeat things you could already see. At 175% interface scale that's 56 real
+   pixels, taken from exactly the users who need the zoom. The settings gear was
+   the only thing in it that wasn't a duplicate, and it now lives at the right
+   end of the toolbar. */
 .app {
   display: grid;
   grid-template-columns: 220px 1fr;
-  grid-template-rows: 32px 1fr 24px;
+  grid-template-rows: 1fr 24px;
   height: 100vh;
   width: 100vw;
-}
-
-/* ── Title Bar ── */
-.titlebar {
-  grid-column: 1 / -1;
-  background: var(--bg-panel);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  gap: 8px;
-}
-
-.titlebar-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 32px;
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 0;
-}
-
-.titlebar-btn:hover {
-  background: var(--bg-raised);
-  color: var(--text-primary);
-}
-
-.titlebar-btn-close:hover {
-  background: var(--accent);
-  color: white;
-}
-
-.titlebar-name {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--accent-text);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.titlebar-sep {
-  color: var(--text-dim);
-  font-size: 11px;
-}
-
-.titlebar-file {
-  font-size: 11px;
-  color: var(--text-secondary);
 }
 
 /* ── Sidebar ── */
@@ -1095,8 +1050,6 @@ body {
   text-transform: lowercase;
 }
 
-.picker-hex-input:focus {
-}
 
 .picker-rgb-row {
   gap: 6px;
@@ -1241,9 +1194,11 @@ body {
   z-index: 50;
 }
 
+/* Anchored to the viewport, not to the toolbar: .main has overflow: hidden, so an
+   absolutely-positioned popover inside it would be clipped. */
 .popover {
-  position: absolute;
-  top: 34px;
+  position: fixed;
+  top: 38px;
   right: 8px;
   background: var(--bg-panel);
   border: 1px solid var(--border-light);
@@ -1303,17 +1258,20 @@ body {
 
 /* ── Settings button ── */
 .settings-btn {
+  /* Pushed to the far right of the toolbar, away from the actions. */
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 24px;
   background: none;
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
   font-size: 14px;
   padding: 0;
+  flex-shrink: 0;
 }
 
 .settings-btn:hover {
