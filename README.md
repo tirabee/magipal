@@ -35,8 +35,6 @@ A desktop color palette manager built for pixel artists, indie game developers, 
 - **Bulk hex import** — Paste a list of hex codes
 - **Multi-format export** — hex list, CSS variables, GPL (GIMP, Krita, Inkscape, **Aseprite**), ASE / Adobe Swatch Exchange (Photoshop, Illustrator, Affinity), PNG swatch sheet, indexed JSON
 
-> **Heads up:** for Aseprite, export **GPL**, not ASE. Aseprite uses `.ase` for its *own* sprite files, which is a different format that merely shares the extension with Adobe Swatch Exchange — hand Aseprite an `.ase` palette and it won't open it.
-
 ### Comfort & Accessibility
 
 - **Keyboard shortcuts** — Press `?` in the app for the full list
