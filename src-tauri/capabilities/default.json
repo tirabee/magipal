@@ -17,6 +17,7 @@
     "fs:allow-exists",
     "fs:scope-home-recursive",
     "updater:default",
-    "process:allow-restart"
+    "process:allow-restart",
+    "core:webview:allow-set-webview-zoom"
   ]
 }

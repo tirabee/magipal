@@ -21,6 +21,11 @@
   padding: 0;
 }
 
+/* Contrast ratios in here are asserted by theme.test.ts, which parses this very
+   file -- so a colour change that drops text below WCAG AA fails the build
+   rather than quietly shipping. --accent is the brand red and is used for
+   borders and button fills; --accent-text is the variant used when accent is
+   TEXT, because the brand red is a hair under AA at small sizes on dark. */
 :root {
   --bg-base: #1a1a2e;
   --bg-panel: #16213e;
@@ -30,9 +35,15 @@
   --border-light: #4a4a6c;
   --accent: #e94560;
   --accent-dim: #a83040;
+  --accent-text: #eb536c;
   --text-primary: #e8e8f0;
   --text-secondary: #9090b0;
-  --text-dim: #5a5a7a;
+  --text-dim: #8888a7;
+
+  /* Turned off by high-contrast mode, which needs every drop of contrast. */
+  --fade-strong: 0.4;
+  --fade-medium: 0.6;
+  --fade-soft: 0.85;
 
   font-family: "JetBrains Mono", monospace;
   font-size: 13px;
@@ -49,9 +60,33 @@
   --border-light: #9090b0;
   --accent: #c0183a;
   --accent-dim: #8f1028;
+  --accent-text: #c0183a;
   --text-primary: #1a1a2e;
   --text-secondary: #3a3a5c;
-  --text-dim: #7070a0;
+  --text-dim: #606091;
+}
+
+/* ── High contrast ──
+   Pushes every text colour to WCAG AAA (7:1), strengthens the borders, and
+   stops the decorative opacity fades from eating the contrast we just bought. */
+[data-contrast="high"] {
+  --border: #6a6a8c;
+  --border-light: #9a9abc;
+  --accent-text: #f293a2;
+  --text-secondary: #c5c5d8;
+  --text-dim: #acacc1;
+
+  --fade-strong: 0.75;
+  --fade-medium: 0.9;
+  --fade-soft: 1;
+}
+
+[data-theme="light"][data-contrast="high"] {
+  --border: #7a7a9c;
+  --border-light: #5a5a7c;
+  --accent-text: #8e122b;
+  --text-secondary: #2a2a44;
+  --text-dim: #3a3a5c;
 }
 
 body {
@@ -105,7 +140,7 @@ body {
 .titlebar-name {
   font-size: 11px;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-text);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -324,7 +359,7 @@ body {
   color: var(--text-secondary);
 }
 .update-status-error {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .toolbar-divider {
@@ -435,7 +470,7 @@ body {
 }
 .vision-report-title {
   font-size: 11px;
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
 }
 .vision-report-pair {
@@ -498,7 +533,7 @@ body {
   white-space: nowrap;
 }
 .palette-limit-badge-full {
-  color: var(--accent);
+  color: var(--accent-text);
   border-color: var(--accent);
 }
 
@@ -655,7 +690,7 @@ body {
 }
 
 .folder-icon {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .folder-name {
   flex: 1;
@@ -676,7 +711,7 @@ body {
   opacity: 1;
 }
 .folder-delete:hover {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .palette-item.indented {
@@ -706,7 +741,7 @@ body {
   opacity: 1;
 }
 .palette-delete:hover {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 /* ── Palette view header ── */
@@ -735,7 +770,7 @@ body {
   opacity: 1;
 }
 .swatch-remove:hover {
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--bg-raised);
 }
 
@@ -784,7 +819,7 @@ body {
 .modal-title {
   font-size: 11px;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-text);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -800,7 +835,7 @@ body {
 }
 
 .modal-close:hover {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .modal-tabs {
@@ -828,7 +863,7 @@ body {
   background: var(--bg-raised);
 }
 .modal-tab.active {
-  color: var(--accent);
+  color: var(--accent-text);
   border-bottom-color: var(--accent);
 }
 
@@ -1061,7 +1096,6 @@ body {
 }
 
 .picker-hex-input:focus {
-  outline: none;
 }
 
 .picker-rgb-row {
@@ -1257,7 +1291,7 @@ body {
 }
 
 .popover-option.active {
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--bg-raised);
 }
 
@@ -1378,7 +1412,6 @@ body {
   font-size: 11px;
   padding: 1px 4px;
   width: 100%;
-  outline: none;
 }
 
 .palette-title-input {
@@ -1389,7 +1422,6 @@ body {
   font-size: 16px;
   font-weight: 700;
   padding: 2px 6px;
-  outline: none;
   width: 300px;
 }
 
@@ -1535,7 +1567,7 @@ body {
 .export-menu-ext {
   font-family: "JetBrains Mono", monospace;
   font-size: 10px;
-  color: var(--accent);
+  color: var(--accent-text);
   white-space: nowrap;
 }
 .main-content {
@@ -1623,7 +1655,6 @@ body {
 }
 
 .palette-notes:focus {
-  outline: none;
   border-bottom-color: var(--border-light);
   color: var(--text-primary);
 }
@@ -1662,7 +1693,6 @@ body {
   width: 100%;
   text-align: center;
   padding: 0;
-  outline: none;
   height: 16px;
 }
 
@@ -1681,7 +1711,7 @@ body {
 }
 
 .lospec-browse-link {
-  color: var(--accent);
+  color: var(--accent-text);
   cursor: pointer;
   text-decoration: underline;
 }
@@ -1701,7 +1731,7 @@ body {
 
 .lospec-error {
   font-size: 11px;
-  color: var(--accent);
+  color: var(--accent-text);
   line-height: 1.5;
 }
 
@@ -1869,4 +1899,99 @@ body {
 
 .dither-test-header .tab-description {
   flex: 1;
+}
+/* ── Accessibility ───────────────────────────────────────────────────────────
+   Everything below is either a fix that applies to everyone, or a mode toggled
+   from Settings via a data-* attribute on <html>. */
+
+/* Focus ring. The app previously set `outline: none` on its inputs, which meant
+   a keyboard user could not see where they were -- especially bad now that we
+   ship keyboard shortcuts. :focus-visible only fires for keyboard focus, so the
+   ring never appears on a mouse click and the look is unchanged for mouse users. */
+:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+
+/* Controls that are hidden until you hover their parent. Fine with a mouse;
+   invisible if you can't hover precisely, and unreachable by keyboard. This mode
+   just leaves them on. */
+[data-controls="always"] .folder-delete,
+[data-controls="always"] .palette-delete,
+[data-controls="always"] .swatch-remove,
+[data-controls="always"] .bar-segment-remove,
+[data-controls="always"] .swatch-ramp-btn {
+  opacity: 1;
+}
+
+/* The decorative fades, wired to variables so high contrast can lift them. */
+.empty-state-detail,
+.swatch-duplicate-badge {
+  opacity: var(--fade-medium);
+}
+.statusbar-item {
+  opacity: var(--fade-soft);
+}
+.btn:disabled,
+.destination-option-locked {
+  opacity: var(--fade-strong);
+}
+
+/* High contrast also wants borders you can actually see. */
+[data-contrast="high"] .swatch-card,
+[data-contrast="high"] .modal,
+[data-contrast="high"] .swatch-bar,
+[data-contrast="high"] .vision-strip,
+[data-contrast="high"] .randomizer-preview {
+  border-width: 2px;
+}
+
+/* Some people get motion sick, and none of these transitions carry meaning. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ── Settings: accessibility group ── */
+.popover {
+  /* The accessibility group makes the popover taller than the window is short. */
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
+  min-width: 220px;
+}
+
+.popover-sublabel {
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin: 6px 0 2px;
+}
+
+.popover-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px 2px;
+  cursor: pointer;
+}
+.popover-toggle input {
+  margin-top: 2px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+.popover-toggle-text {
+  display: flex;
+  flex-direction: column;
+}
+.popover-toggle-label {
+  font-size: 11px;
+  color: var(--text-primary);
+}
+.popover-toggle-description {
+  font-size: 10px;
+  color: var(--text-secondary);
 }

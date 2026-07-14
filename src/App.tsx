@@ -77,6 +77,12 @@ function App() {
     setTheme,
     swatchStyle,
     setSwatchStyle,
+    uiScale,
+    setUiScale,
+    highContrast,
+    setHighContrast,
+    alwaysShowControls,
+    setAlwaysShowControls,
     loaded: prefsLoaded,
   } = usePreferences();
   const [showSettings, setShowSettings] = useState(false);
@@ -487,6 +493,9 @@ function App() {
           <SettingsPopover
             theme={theme}
             swatchStyle={swatchStyle}
+            uiScale={uiScale}
+            highContrast={highContrast}
+            alwaysShowControls={alwaysShowControls}
             onThemeChange={(t) => {
               setTheme(t);
               setShowSettings(false);
@@ -495,6 +504,11 @@ function App() {
               setSwatchStyle(s);
               setShowSettings(false);
             }}
+            // The accessibility controls deliberately leave the popover open:
+            // you need to see the effect to know whether it's the one you want.
+            onUiScaleChange={setUiScale}
+            onHighContrastChange={setHighContrast}
+            onAlwaysShowControlsChange={setAlwaysShowControls}
             onClose={() => setShowSettings(false)}
           />
         )}
