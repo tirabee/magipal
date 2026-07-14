@@ -29,3 +29,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Built release artifacts — published to GitHub Releases, not committed.
+release/

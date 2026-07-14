@@ -51,16 +51,22 @@ npm run tauri build
 
 Artifacts land in `src-tauri/target/release/bundle/`:
 
-- `nsis/magipal_<version>_x64-setup.exe` — the installer people download
-- `nsis/magipal_<version>_x64-setup.nsis.zip` — what the updater downloads
-- `nsis/magipal_<version>_x64-setup.nsis.zip.sig` — the signature
+- `nsis/magipal_<version>_x64-setup.exe` — the installer. This is both what people
+  download **and** what the updater downloads.
+- `nsis/magipal_<version>_x64-setup.exe.sig` — its signature.
+- `msi/…` — an MSI is also produced. We don't publish it; one installer is enough
+  and two invites people to pick the wrong one.
+
+Tauri v2 signs the installer **directly**. Older guides (and an earlier version of
+this file) refer to a `.nsis.zip` — that does not exist here. Pointing
+`latest.json` at one produces an updater that fails for every user, silently,
+because a failed update check is deliberately quiet.
 
 ## 4. Publish the GitHub release
 
 Tag it `v<version>` and attach:
 
 - `magipal_<version>_x64-setup.exe`
-- `magipal_<version>_x64-setup.nsis.zip`
 - `latest.json` (below)
 
 ## 5. Write `latest.json`
@@ -73,11 +79,11 @@ The app fetches this from
 {
   "version": "0.9.0",
   "notes": "What changed, in plain language. This text is shown to the user.",
-  "pub_date": "2026-07-13T00:00:00Z",
+  "pub_date": "2026-07-14T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
       "signature": "PASTE THE ENTIRE CONTENTS OF THE .sig FILE HERE",
-      "url": "https://github.com/tirabee/magipal/releases/download/v0.9.0/magipal_0.9.0_x64-setup.nsis.zip"
+      "url": "https://github.com/tirabee/magipal/releases/download/v0.9.0/magipal_0.9.0_x64-setup.exe"
     }
   }
 }
@@ -87,7 +93,7 @@ Gotchas that will silently break updates:
 
 - `version` must **not** have a leading `v`. The tag does; this field doesn't.
 - `signature` is the *contents* of the `.sig` file, not a path or a URL.
-- The `url` must point at the `.nsis.zip`, not the `.exe`.
+- The `url` points at the **`-setup.exe`** — Tauri v2 signs the installer itself.
 - The release must not be a draft or pre-release, or `/releases/latest/` skips it.
 
 ## 6. Verify the update actually works
