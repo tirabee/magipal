@@ -110,8 +110,12 @@ Magipal is an independent project by [tirabee](https://github.com/tirabee)
 
 Made with love for anyone who enjoys colors and creativity. ♥
 
+Magipal runs entirely on your machine. It makes no network requests except when you explicitly import a palette from Lospec.
+
 ---
 
 ## License
 
-MIT
+Magipal is MIT licensed — see [LICENSE](./LICENSE).
+
+It bundles [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono), licensed under the SIL Open Font License 1.1 — see [licenses/OFL-JetBrainsMono.txt](./licenses/OFL-JetBrainsMono.txt).

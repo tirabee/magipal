@@ -1,3 +1,17 @@
+/* ── Font ──
+   Bundled rather than fetched from Google. Magipal is a local desktop app: it
+   should not phone home on every launch, and it should render correctly with no
+   network at all. JetBrains Mono is a variable font, so one file covers every
+   weight we use. Licensed under the SIL Open Font License -- see
+   licenses/OFL-JetBrainsMono.txt. */
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("./assets/fonts/jetbrains-mono-latin.woff2") format("woff2");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ── Reset & Base ── */
 *,
 *::before,
