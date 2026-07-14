@@ -2210,6 +2210,25 @@ tbody .contrast-head {
   flex-shrink: 0;
 }
 
+/* The toolbar is a non-wrapping row inside .main, which hides its overflow -- so
+   in a narrow window, or at 175% interface scale where the viewport effectively
+   shrinks, the right-hand buttons would be clipped away and become unreachable.
+   Let it scroll instead of swallowing them. */
+.main-toolbar {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+.main-toolbar::-webkit-scrollbar {
+  height: 4px;
+}
+.main-toolbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.main-toolbar::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
 .sidebar-header {
   display: flex;
   align-items: center;
